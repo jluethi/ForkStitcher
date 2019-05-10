@@ -247,14 +247,13 @@ class Xml_MAPS_Parser():
 
     def find_annotation_tile(self):
         # Give annotation_name, square metadata key, square_name, tile_name, stage coordinates & pixel position in the image
-        # for annotation_name in annotations:
-        annotation_name = 'fork1'
-        a_coordinates = np.array([self.annotations[annotation_name]['StagePosition_x'], self.annotations[annotation_name]['StagePosition_y']])
-        distance_map = np.square(np.array(self.tile_center_stage_positions) - a_coordinates)
-        quandratic_distance = distance_map[:, 0] + distance_map[:, 1]
-        print(quandratic_distance)
-        tile_index = np.argmin(quandratic_distance)
-        print(self.tile_names[tile_index])
+        for annotation_name in self.annotations:
+            a_coordinates = np.array([self.annotations[annotation_name]['StagePosition_x'], self.annotations[annotation_name]['StagePosition_y']])
+            distance_map = np.square(np.array(self.tile_center_stage_positions) - a_coordinates)
+            quandratic_distance = distance_map[:, 0] + distance_map[:, 1]
+            tile_index = np.argmin(quandratic_distance)
+            # TODO: Deal with the possibility of equi-distant tiles
+            print(annotation_name, ': ', self.tile_names[tile_index][1])
 
 
 def main():
@@ -269,9 +268,9 @@ def main():
     parser.find_annotation_tile()
     # print(parser.tile_names)
 
-    print(parser.annotations)
-    print(parser.squares)
-    print(parser.tiles['28000 (6)_Tile_003-011-000000_0-000.tif'])
+    # print(parser.annotations)
+    # print(parser.squares)
+    # print(parser.tiles['28000 (6)_Tile_003-011-000000_0-000.tif'])
     # print(tile_center_stage_positions)
     # print(tile_names)
 
