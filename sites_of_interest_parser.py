@@ -1,10 +1,12 @@
 # Script that parses the Site of Interest annotations from a MAPS XML file
 
 import xml.etree.ElementTree as ET
-import os
 import sys
+import numpy as np
+import math
+from pathlib import Path
 
-project_folder_path = '/Users/Joel/Desktop/'
+project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/8330_siNeg_CPT_3rd/'
 name_of_highmag_layer = 'highmag'
 
 # In the samples I had, MAPS didn't show any aligned positions. Therefore, unaligned positions is what we want to
@@ -13,7 +15,7 @@ position_to_use = 0
 position_to_extract = ['UnalignedPosition', 'CalculatedPosition']
 xml_file_name = 'MapsProject.xml'
 
-xml_file_path = os.path.join(project_folder_path, xml_file_name)
+xml_file_path = Path(project_folder_path) / xml_file_name
 
 def extract_square_metadata(xml_file, name_of_highmag_layer):
     # Extract the information about all the squares (high magnification acquisition layers)
@@ -43,11 +45,11 @@ def extract_square_metadata(xml_file, name_of_highmag_layer):
                                         for layer_content in square:
                                             if layer_content.tag.endswith('totalHfw'):
                                                 # noinspection PyUnboundLocalVariable
-                                                squares[metadata_location]['totalHfw'] = list(layer_content.attrib.values())[1]
+                                                squares[metadata_location]['totalHfw'] = float(list(layer_content.attrib.values())[1])
 
                                             if layer_content.tag.endswith('tileHfw'):
                                                 # noinspection PyUnboundLocalVariable
-                                                squares[metadata_location]['tileHfw'] = list(layer_content.attrib.values())[1]
+                                                squares[metadata_location]['tileHfw'] = float(list(layer_content.attrib.values())[1])
 
                                             if layer_content.tag.endswith('overlapHorizontal'):
                                                 # noinspection PyUnboundLocalVariable
@@ -58,7 +60,7 @@ def extract_square_metadata(xml_file, name_of_highmag_layer):
 
                                             if layer_content.tag.endswith('rotation'):
                                                 # noinspection PyUnboundLocalVariable
-                                                squares[metadata_location]['rotation'] = list(layer_content.attrib.values())[1]
+                                                squares[metadata_location]['rotation'] = float(list(layer_content.attrib.values())[1])
 
                                             if layer_content.tag.endswith('rows'):
                                                 # noinspection PyUnboundLocalVariable
@@ -68,10 +70,18 @@ def extract_square_metadata(xml_file, name_of_highmag_layer):
                                                 # noinspection PyUnboundLocalVariable
                                                 squares[metadata_location]['columns'] = int(layer_content.text)
 
+                                            if layer_content.tag.endswith('scanResolution'):
+                                                for scanres_info in layer_content:
+                                                    if scanres_info.tag.endswith('height'):
+                                                        # noinspection PyUnboundLocalVariable
+                                                        squares[metadata_location]['img_height'] = int(scanres_info.text)
+                                                    if scanres_info.tag.endswith('width'):
+                                                        # noinspection PyUnboundLocalVariable
+                                                        squares[metadata_location]['img_width'] = int(scanres_info.text)
 
                                             if layer_content.tag.endswith('pixelSize'):
                                                     # noinspection PyUnboundLocalVariable
-                                                    squares[metadata_location]['pixel_size'] = layer_content.attrib['Value']
+                                                    squares[metadata_location]['pixel_size'] = float(layer_content.attrib['Value'])
 
                                             if layer_content.tag.endswith('StagePosition'):
                                                 for positon_info in layer_content:
@@ -86,11 +96,11 @@ def extract_square_metadata(xml_file, name_of_highmag_layer):
                                         sys.exit(-1)
     return squares
 
-def extract_annotation_locations(xml_file_path):
+def extract_annotation_locations(xml_file):
     # Get all x & y positions of the annotations & the annotation name and save them in a dictionary.
     # Keys are the annotation names, values are a dictionary of x & y positions of that annotation
     annotations = {}
-    for child in root:
+    for child in xml_file:
         if child.tag.endswith('LayerGroups'):
             for grand_child in child:
                 for ggc in grand_child:
@@ -116,19 +126,16 @@ def extract_annotation_locations(xml_file_path):
                                 sys.exit(-1)
     return annotations
 
-def get_relative_tile_locations(squares):
+def get_relative_tile_locations(project_folder_path, squares):
     tiles = {}
     # read in all the metadata files for the different squares to get tile positions
     metadata_filename = 'StitchingData.xml'
     for metadata_location in squares:
         tile_image_folder_path = ''
-        metadata_root = ET.parse(os.path.join(project_folder_path, metadata_location, metadata_filename)).getroot()
-        # print('1. ' + metadata_root.tag)
+        metadata_path = Path(project_folder_path).joinpath(convert_windows_pathstring_to_path_object(metadata_location)) / metadata_filename
+        metadata_root = ET.parse(metadata_path).getroot()
         for metadata_child in metadata_root:
-            # print('2. ' + metadata_child.tag)
-
             if metadata_child.tag.endswith('tileSet'):
-
                 for metadata_grandchild in metadata_child:
                     if metadata_grandchild.tag.endswith('TileImageFolder'):
                         tile_image_folder_path = metadata_grandchild.text
@@ -136,74 +143,138 @@ def get_relative_tile_locations(squares):
                         squares[metadata_location]['square_name'] = current_square
 
                     if metadata_grandchild.tag.endswith('_tileCollection'):
-                        # print('3. ' + metadata_grandchild.tag)
                         for ggc in metadata_grandchild:
                             if ggc.tag.endswith('_innerCollection'):
-                                # print('4. ' + ggc.tag)
                                 for gggc in ggc:
-                                    # print('5. ' + gggc.tag)
                                     for keyvalue in gggc:
                                         if keyvalue.tag.endswith('Value'):
                                             for value in keyvalue:
                                                 if value.tag.endswith('ImageFileName'):
-                                                    tile_name = value.text
+                                                    # noinspection PyUnboundLocalVariable
+                                                    tile_name = current_square + '_' + value.text
                                                     tiles[tile_name] = {'square' : metadata_location,
                                                                         'img_path': tile_image_folder_path}
 
                                             for value in keyvalue:
-                                                # print('7. ' + value.tag)
-                                                # print(value.attrib)
-                                                # print(value.text)
                                                 if value.tag.endswith('PositioningDetails'):
                                                     for positioning_detail in value:
-                                                        # if positioning_detail.tag.endswith('CalculatedPosition'):
                                                         if positioning_detail.tag.endswith(position_to_extract[position_to_use]):
                                                             for position in positioning_detail:
-                                                                # print('9. ' + position.tag)
-                                                                # print(position.attrib)
-                                                                # print(position.text)
 
                                                                 if position.tag == '{http://schemas.datacontract.org/2004/07/System.Drawing}x':
                                                                     # noinspection PyUnboundLocalVariable
-                                                                    tiles[tile_name]['SquarePosition_x'] = float(
+                                                                    tiles[tile_name]['RelativeTilePosition_x'] = float(
                                                                         position.text)
                                                                 elif position.tag == '{http://schemas.datacontract.org/2004/07/System.Drawing}y':
                                                                     # noinspection PyUnboundLocalVariable
-                                                                    tiles[tile_name]['SquarePosition_y'] = float(
+                                                                    tiles[tile_name]['RelativeTilePosition_y'] = float(
                                                                         position.text)
     return [squares, tiles]
 
-# Load the MAPS XML File
-try:
-    root = ET.parse(xml_file_path).getroot()
-except FileNotFoundError:
-    print("Can't find the MAPS XML File at the location {}".format(xml_file_path))
-    sys.exit(-1)
 
-# squares = extract_square_metadata(root, name_of_highmag_layer)
-# annotations = extract_annotation_locations(root)
-# print(annotations)
-# print(squares)
+def convert_windows_pathstring_to_path_object(string_path):
+    folders = string_path.split('\\')
+    path = Path()
+    for folder in folders:
+        path = path / folder
+    return path
 
-squares = {'MetaData': {'StagePosition_center_x': -0.0004954659535219988, 'StagePosition_center_y': 0.00022218860716983652, 'rotation': '90.026172973267862', 'columns': 22, 'overlapHorizontal': 0.1, 'overlapVertical': 0.1, 'pixel_size': '4.9912651789441043E-10', 'rows': 23, 'tileHfw': '2.0444222172955051E-06', 'totalHfw': '4.068400212418055E-05'}}
 
-[squares, tiles] = get_relative_tile_locations(squares)
+def calculate_absolute_tile_coordinates(squares, tiles):
+    # Create absolute positions from the relative Tile positions
+    # Calculate the edge Stage position of the square based on the parameters extracted
+    tile_center_stage_positions = []
+    tile_names = []
 
-print(squares)
-print(tiles)
+    current_square_key = (list(squares.keys())[0])
+    current_square = squares[current_square_key]
 
-# DO: Create absolute positions from the relative Tile positions
-# Calculate the edge Stage position of the square based on the parameters extracted
-current_square_key = (list(squares.keys())[0])
-current_square = squares[current_square_key]
-print(current_square)
+    # Because images are square, tileVfw is equal to tileHfw. Unsure if it's height/width or width/height because they are always the same on Talos
+    current_square['tileVfw'] = current_square['img_height'] / current_square['img_width'] * current_square['tileHfw']
 
-# If the rotation is 90 degrees, the case is relatively simple
+    horizontal_field_width = (current_square['columns'] - 1) * current_square['tileHfw'] * (
+                1 - current_square['overlapHorizontal']) + current_square['tileHfw']
+    vertical_field_width = (current_square['rows'] - 1) * current_square['tileVfw'] * (
+                1 - current_square['overlapHorizontal']) + current_square['tileVfw']
+
+    relative_0_x = current_square['StagePosition_center_x'] - math.sin(
+        current_square['rotation'] / 180 * math.pi) * vertical_field_width / 2 + math.cos(
+        current_square['rotation'] / 180 * math.pi) * horizontal_field_width / 2
+    relative_0_y = current_square['StagePosition_center_y'] - math.cos(
+        current_square['rotation'] / 180 * math.pi) * vertical_field_width / 2 - math.sin(
+        current_square['rotation'] / 180 * math.pi) * horizontal_field_width / 2
+    relative_0 = np.array([relative_0_x, relative_0_y])
+
+    squares[current_square_key]['StagePosition_corner_x'] = relative_0[0]
+    squares[current_square_key]['StagePosition_corner_y'] = relative_0[1]
+
+    for current_tile_name in tiles:
+        current_tile = tiles[current_tile_name]
+
+        relative_x_stepsize = np.array([current_square['pixel_size'] * math.cos(current_square['rotation'] / 180 * math.pi),
+                                        current_square['pixel_size'] * math.sin(
+                                            current_square['rotation'] / 180 * math.pi)])
+        relative_y_stepsize = np.array([current_square['pixel_size'] * math.sin(current_square['rotation'] / 180 * math.pi),
+                                        current_square['pixel_size'] * math.cos(
+                                            current_square['rotation'] / 180 * math.pi)])
+
+        # absolute_tile_pos is the position of the corner of the tile in absolute Stage Position coordinates, the tile_center_stage_position are the Stage Position coordinates of the tile
+        absolute_tile_pos = relative_0 + current_tile['RelativeTilePosition_x'] * relative_x_stepsize + current_tile[
+            'RelativeTilePosition_y'] * relative_y_stepsize
+        tile_center_stage_position = absolute_tile_pos + current_square['img_width'] / 2 * relative_x_stepsize + \
+                                     current_square['img_height'] / 2 * relative_y_stepsize
+
+        tile_center_stage_positions.append(tile_center_stage_position)
+        tile_names.append([current_square, current_tile_name])
+
+    return squares, np.array(tile_center_stage_positions), tile_names
+
+
+def find_annotation_tile(annotations, tile_center_stage_positions):
+    # Give annotation_name, square metadata key, square_name, tile_name, stage coordinates & pixel position in the image
+    for annotation_name in annotations:
+        a_coordinates = np.array([annotations[annotation_name]['StagePosition_x'], annotations[annotation_name]['StagePosition_y']])
+        distance_map = tile_center_stage_positions - a_coordinates
+
+        print(distance_map)
+
+
+
+def main():
+    # Load the MAPS XML File
+    try:
+        root = ET.parse(xml_file_path).getroot()
+    except FileNotFoundError:
+        print("Can't find the MAPS XML File at the location {}".format(xml_file_path))
+        sys.exit(-1)
+
+    squares = extract_square_metadata(root, name_of_highmag_layer)
+    annotations = extract_annotation_locations(root)
+    [squares, tiles] = get_relative_tile_locations(project_folder_path, squares)
+    [squares, tile_center_stage_positions, tile_names] = calculate_absolute_tile_coordinates(squares, tiles)
+    find_annotation_tile(annotations, tile_center_stage_positions)
+
+    print(annotations)
+    print(squares)
+    print(len(tiles))
+    # print(tile_center_stage_positions)
+    # print(tile_names)
+
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
 
 # Change to using findall() with full tags instead of matching end of tags
 # for type_tag in root.findall('bar/type'):
 #     value = type_tag.get('foobar')
 #     print(value)
+
 
 
 
