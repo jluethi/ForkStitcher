@@ -8,8 +8,8 @@ from pathlib import Path
 
 class Xml_MAPS_Parser():
 
-    def __init__(self, project_folder, name_of_highmag_layer = 'highmag', position_to_use = 0):
-        self.project_folder_path = project_folder
+    def __init__(self, project_folder, name_of_highmag_layer = 'highmag', position_to_use = 0, stitch_radius = 1):
+        self.project_folder_path = Path(project_folder)
         self.name_of_highmag_layer = name_of_highmag_layer
 
         # In the samples I had, MAPS didn't show any aligned positions. Therefore, unaligned positions is what we want to
@@ -18,13 +18,16 @@ class Xml_MAPS_Parser():
         self.position_to_extract = potential_positions_to_extract[position_to_use]
         xml_file_name = 'MapsProject.xml'
 
-        xml_file_path = Path(self.project_folder_path) / xml_file_name
+        xml_file_path = self.project_folder_path / xml_file_name
         self.xml_file = self.load_xml(xml_file_path)
         self.squares = {}
         self.tiles = {}
         self.annotations = {}
         self.tile_names = []
         self.tile_center_stage_positions = []
+        self.annotation_tiles = {}
+        self.stitch_radius = stitch_radius
+
 
     def load_xml(self, xml_file_path):
         # Load the MAPS XML File
@@ -36,9 +39,30 @@ class Xml_MAPS_Parser():
         return root
 
     def parse_xml(self):
-        # run function to call all the internal functions
-        pass
+        # run function to call all the internal functions.
+        # Parses the XML file and saves the results in the class variables
+        self.extract_square_metadata()
+        self.extract_annotation_locations()
+        self.get_relative_tile_locations()
+        self.calculate_absolute_tile_coordinates()
+        self.find_annotation_tile()
+        self.determine_surrounding_sites()
 
+    def convert_windows_pathstring_to_path_object(self, string_path):
+        folders = string_path.split('\\')
+        path = Path()
+        for folder in folders:
+            path = path / folder
+        return path
+
+    def convert_img_path_to_local_path(self, img_path):
+        # The paths contained in the XML files contain a 'D:\\ProjectName', even though the files aren't actually
+        # on the D drive. Correct by using the project_folder_path
+        folders = img_path.split('\\')
+        path = self.project_folder_path
+        for folder in folders[2:]:
+            path = path / folder
+        return path
 
     def extract_square_metadata(self):
         # Extract the information about all the squares (high magnification acquisition layers)
@@ -150,7 +174,7 @@ class Xml_MAPS_Parser():
         metadata_filename = 'StitchingData.xml'
         for metadata_location in self.squares:
             tile_image_folder_path = ''
-            metadata_path = Path(self.project_folder_path).joinpath(self.convert_windows_pathstring_to_path_object(metadata_location)) / metadata_filename
+            metadata_path = self.project_folder_path.joinpath(self.convert_windows_pathstring_to_path_object(metadata_location)) / metadata_filename
             metadata_root = ET.parse(metadata_path).getroot()
             for metadata_child in metadata_root:
                 if metadata_child.tag.endswith('tileSet'):
@@ -189,15 +213,6 @@ class Xml_MAPS_Parser():
                                                                         # noinspection PyUnboundLocalVariable
                                                                         self.tiles[tile_name]['RelativeTilePosition_y'] = float(
                                                                             position.text)
-
-
-    def convert_windows_pathstring_to_path_object(self, string_path):
-        folders = string_path.split('\\')
-        path = Path()
-        for folder in folders:
-            path = path / folder
-        return path
-
 
     def calculate_absolute_tile_coordinates(self):
         # Create absolute positions from the relative Tile positions
@@ -244,28 +259,63 @@ class Xml_MAPS_Parser():
             self.tile_center_stage_positions.append(tile_center_stage_position)
             self.tile_names.append([current_square['square_name'], current_tile_name])
 
-
     def find_annotation_tile(self):
         # Give annotation_name, square metadata key, square_name, tile_name, stage coordinates & pixel position in the image
+        # TODO: Save the other relevant output information besides the tile_name
         for annotation_name in self.annotations:
             a_coordinates = np.array([self.annotations[annotation_name]['StagePosition_x'], self.annotations[annotation_name]['StagePosition_y']])
             distance_map = np.square(np.array(self.tile_center_stage_positions) - a_coordinates)
             quandratic_distance = distance_map[:, 0] + distance_map[:, 1]
             tile_index = np.argmin(quandratic_distance)
             # TODO: Deal with the possibility of equi-distant tiles
-            print(annotation_name, ': ', self.tile_names[tile_index][1])
+            current_tile = self.tiles[self.tile_names[tile_index][1]]
+            self.annotation_tiles[annotation_name] = current_tile
+
+            # TODO: Calculate the position of the fork within the image and return it as well
+
+            # TODO: Include a threshold to discard forks if they are outside of any tiles
+
+    def determine_surrounding_sites(self):
+        # Take in the center tile and determine the names & existence of stitch_radius tiles around it.
+        # In default stitch-radius = 1, it searches for the 8 tiles surrounding the center tile
+        for annotation_name in self.annotation_tiles:
+            center_filename = self.annotation_tiles[annotation_name]['filename']
+
+            # self.annotation_tiles[annotation_name]['surrounding_tile_names']=[]
+            self.annotation_tiles[annotation_name]['surrounding_tile_exists'] = []
+
+            x = int(center_filename[5:8])
+            y = int(center_filename[9:12])
+            for i in range(-self.stitch_radius, self.stitch_radius + 1):
+                for j in range(-self.stitch_radius, self.stitch_radius + 1):
+                    # Create the filenames
+                    new_filename = center_filename[:5] + f'{x+i:03}' + '-' + f'{y+j:03}' + center_filename[12:]
+                    # self.annotation_tiles[annotation_name]['surrounding_tile_names'].append(new_filename)
+
+                    # Check whether those files exist
+                    img_path = self.convert_img_path_to_local_path(self.annotation_tiles[annotation_name]['img_path']) / new_filename
+
+                    if img_path.is_file():
+                        self.annotation_tiles[annotation_name]['surrounding_tile_exists'].append(True)
+                    else:
+                        self.annotation_tiles[annotation_name]['surrounding_tile_exists'].append(False)
+
+
+
 
 
 def main():
-    project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/8330_siNeg_CPT_3rd/'
-    highmag_layer = 'highmag'
-    parser = Xml_MAPS_Parser(project_folder= project_folder_path, position_to_use=0, name_of_highmag_layer=highmag_layer)
-
-    parser.extract_square_metadata()
-    parser.extract_annotation_locations()
-    parser.get_relative_tile_locations()
-    parser.calculate_absolute_tile_coordinates()
-    parser.find_annotation_tile()
+    pass
+    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/8330_siNeg_CPT_3rd/'
+    # highmag_layer = 'highmag'
+    # parser = Xml_MAPS_Parser(project_folder= project_folder_path, position_to_use=0, name_of_highmag_layer=highmag_layer)
+    #
+    # parser.extract_square_metadata()
+    # parser.extract_annotation_locations()
+    # parser.get_relative_tile_locations()
+    # parser.calculate_absolute_tile_coordinates()
+    # annotation_tiles = parser.find_annotation_tile()
+    # print(annotation_tiles)
     # print(parser.tile_names)
 
     # print(parser.annotations)
