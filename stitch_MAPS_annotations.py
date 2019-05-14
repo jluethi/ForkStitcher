@@ -41,6 +41,8 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
 
             # TODO: Add an 8 bit export option
 
+            # TODO: Add an arrow to the image
+
         else:
             # TODO: Potentially implement stitching for edge-cases of non 3x3 tiles
             # TODO: Change warning to some log entry (print console is full of fiji stitching info
@@ -56,12 +58,14 @@ def save_annotation_info_to_csv(xml_parser):
     # (img coordinates)
 
     # From self.annotation_tiles: img_path, filename, square_name, stage coordinates, pixel coordinates in the raw
-    # image and pixel coordinates in the stitched image
+    # image and pixel coordinates in the stitched image (need to figure out how to get the pixel coordinates in the
+    # stitched image)
     pass
 
 
 def main():
-    project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/8330_siNeg_CPT_3rd/'
+    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/8330_siNeg_CPT_3rd/'
+    project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_CPT_3rd_2ul/'
     stitch_radius = 1
 
     # Check if a folder for the stitched forks already exists. If not, create that folder

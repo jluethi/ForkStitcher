@@ -396,17 +396,18 @@ class Xml_MAPS_Parser():
 
 
 def main():
+    pass
     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/8330_siNeg_CPT_3rd/'
-    project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_CPT_3rd_2ul/'
-    highmag_layer = 'highmag'
-    parser = Xml_MAPS_Parser(project_folder=project_folder_path, position_to_use=0,
-                             name_of_highmag_layer=highmag_layer, stitch_radius=1)
-
-    parser.parse_xml()
-
-    for annotation_name in parser.annotation_tiles:
-        print(annotation_name)
-        print(parser.annotation_tiles[annotation_name]['square_name'], ':', parser.annotation_tiles[annotation_name]['filename'])
+    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_CPT_3rd_2ul/'
+    # highmag_layer = 'highmag'
+    # parser = Xml_MAPS_Parser(project_folder=project_folder_path, position_to_use=0,
+    #                          name_of_highmag_layer=highmag_layer, stitch_radius=1)
+    #
+    # parser.parse_xml()
+    #
+    # for annotation_name in parser.annotation_tiles:
+    #     print(annotation_name)
+    #     print(parser.annotation_tiles[annotation_name]['square_name'], ':', parser.annotation_tiles[annotation_name]['filename'])
 
     # print(parser.annotation_tiles)
     # parser.extract_square_metadata()
