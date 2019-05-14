@@ -4,14 +4,12 @@ import shutil
 import os
 from pathlib import Path
 
-
-# Stitching plugin only runs when the local Fiji installation is being used. When a current imageJ gateway is installed,
-# it does not find the plugin
-
 def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
     # This function takes the parser object containing all the information about the MAPS project and its annotations.
     # It the performs stitching
     # TODO: Find a way to call the Fiji stitching without falling back to the local Fiji library
+    # Stitching plugin only runs when the local Fiji installation is being used. When a current imageJ gateway
+    # is used, it does not find the plugin
     # ij = imagej.init('sc.fiji:fiji')
     ij = imagej.init('/Applications/Fiji.app')
     for annotation_name in xml_parser.annotation_tiles:
@@ -41,8 +39,11 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
             output_filename = annotation_name + '.tiff'
             shutil.move(img_path / 'img_t1_z1_c1', output_path / output_filename)
 
+            # TODO: Add an 8 bit export option
+
         else:
             # TODO: Potentially implement stitching for edge-cases of non 3x3 tiles
+            # TODO: Change warning to some log entry (print console is full of fiji stitching info
             print(
                 'WARNING! Not stitching fork {} at the moment, because it is not surrounded by other tiles'.format(
                     annotation_name))
@@ -53,6 +54,9 @@ def save_annotation_info_to_csv(xml_parser):
     # quality control and so that users assign whether an annotation was a fork or a false positive.
     # Needs to have the information about fork location both in MAPS (global coordinates) and in the stitched image
     # (img coordinates)
+
+    # From self.annotation_tiles: img_path, filename, square_name, stage coordinates, pixel coordinates in the raw
+    # image and pixel coordinates in the stitched image
     pass
 
 
