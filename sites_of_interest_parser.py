@@ -228,7 +228,7 @@ class Xml_MAPS_Parser():
                                                         # noinspection PyUnboundLocalVariable
                                                         tile_name = current_square + '_' + value.text
                                                         self.tiles[tile_name] = {'square': metadata_location,
-                                                                                 'img_path': tile_image_folder_path,
+                                                                                 'img_path': self.convert_img_path_to_local_path(tile_image_folder_path),
                                                                                  'filename': value.text,
                                                                                  'square_name': current_square}
 
@@ -358,8 +358,11 @@ class Xml_MAPS_Parser():
                     x_shift = 0
                     y_shift = 0
 
-                self.annotation_tiles[annotation_name]['Annotation_img_position'] = [int(round(self.img_height / 2 - x_shift)),
-                                                                                     int(round(self.img_width / 2 - y_shift))]
+                annotation_img_position = [int(round(self.img_height / 2 - x_shift)),
+                                           int(round(self.img_width / 2 - y_shift))]
+                self.annotation_tiles[annotation_name]['Annotation_img_position_x'] = annotation_img_position[0]
+                self.annotation_tiles[annotation_name]['Annotation_img_position_y'] = annotation_img_position[1]
+
             else:
                 # TODO: Change warning to some log entry (print console is full of fiji stitching info)
                 # print(quandratic_distance[tile_index])
@@ -386,8 +389,7 @@ class Xml_MAPS_Parser():
                     # self.annotation_tiles[annotation_name]['surrounding_tile_names'].append(new_filename)
 
                     # Check whether those files exist
-                    img_path = self.convert_img_path_to_local_path(
-                        self.annotation_tiles[annotation_name]['img_path']) / new_filename
+                    img_path = self.annotation_tiles[annotation_name]['img_path'] / new_filename
 
                     if img_path.is_file():
                         self.annotation_tiles[annotation_name]['surrounding_tile_exists'].append(True)
@@ -399,11 +401,15 @@ def main():
     pass
     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/8330_siNeg_CPT_3rd/'
     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_CPT_3rd_2ul/'
-    # highmag_layer = 'highmag'
-    # parser = Xml_MAPS_Parser(project_folder=project_folder_path, position_to_use=0,
-    #                          name_of_highmag_layer=highmag_layer, stitch_radius=1)
-    #
-    # parser.parse_xml()
+    project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_HU_1st_y1/'
+
+    highmag_layer = 'highmag'
+    parser = Xml_MAPS_Parser(project_folder=project_folder_path, position_to_use=0,
+                             name_of_highmag_layer=highmag_layer, stitch_radius=1)
+
+    parser.parse_xml()
+    print(parser.annotation_tiles)
+
     #
     # for annotation_name in parser.annotation_tiles:
     #     print(annotation_name)
