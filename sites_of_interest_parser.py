@@ -6,6 +6,7 @@ import sys
 import numpy as np
 import math
 from pathlib import Path
+import logging
 
 
 class Xml_MAPS_Parser():
@@ -82,7 +83,7 @@ class Xml_MAPS_Parser():
                         # Get the path to the metadata xml files for all the highmag squares,
                         # the pixel size and the StagePosition of the square
                         if ggc.tag.endswith('displayName') and ggc.text == self.name_of_highmag_layer:
-                            print('Extracting images from {} layer'.format(ggc.text))
+                            logging.info('Extracting images from {} layer'.format(ggc.text))
 
                             for highmag in grand_child:
                                 if highmag.tag.endswith('Layers'):
@@ -353,10 +354,10 @@ class Xml_MAPS_Parser():
                                                           relative_y_stepsize[1] * relative_x_stepsize[0])
 
                 except ZeroDivisionError:
-                    # TODO: Change warning to some log entry (print console is full of fiji stitching info)
-                    print('WARNING! Formula for the calculation of the annotation position within the image does not '
-                          'work for these parameters, a rotation of {} leads to divison by 0. The annotation marker is '
-                          'placed in the middle of the image because the location could not be calculated'
+                    logging.warning('Formula for the calculation of the annotation position within the image '
+                                    'does not work for these parameters, a rotation of {} leads to divison by 0. The '
+                                    'annotation marker is placed in the middle of the image because the location '
+                                    'could not be calculated'
                           .format(rotation))
                     x_shift = 0
                     y_shift = 0
@@ -367,10 +368,7 @@ class Xml_MAPS_Parser():
                 self.annotation_tiles[annotation_name]['Annotation_img_position_y'] = annotation_img_position[1]
 
             else:
-                # TODO: Change warning to some log entry (print console is full of fiji stitching info)
-                # print(quandratic_distance[tile_index])
-                # print(distance_threshold)
-                print('WARNING! Annotation {} is not within any of the tiles and will be ignored'.
+                logging.warning('Annotation {} is not within any of the tiles and will be ignored'.
                       format(annotation_name))
 
 

@@ -7,6 +7,7 @@ import pandas as pd
 import re
 import numpy as np
 import cv2
+import logging
 
 def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight_bit = False):
     # This function takes the parser object containing all the information about the MAPS project and its annotations.
@@ -21,7 +22,7 @@ def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight
         number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
         # If the image files for the 8 neighbors and the tile exist, stitch the images
         if number_existing_neighbor_tiles == 9:
-            print('Stitching {}'.format(annotation_name))
+            logging.info('Stitching {}'.format(annotation_name))
             center_filename = annotation_tiles[annotation_name]['filename']
 
             img_path = annotation_tiles[annotation_name]['img_path']
@@ -80,7 +81,6 @@ def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight
             original_annotation_coord = [annotation_tiles[annotation_name]['Annotation_img_position_x'],
                                          annotation_tiles[annotation_name]['Annotation_img_position_y']]
             stitched_annotation_coordinates = check_stitching_result(stitching_config, original_annotation_coord)
-            print(stitched_annotation_coordinates)
 
             annotation_tiles[annotation_name]['Stitched_annotation_img_position_x'] = \
                 stitched_annotation_coordinates[0]
@@ -95,9 +95,7 @@ def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight
 
         else:
             # TODO: Potentially implement stitching for edge-cases of non 3x3 tiles
-            # TODO: Change warning to some log entry (print console is full of fiji stitching info)
-            print(
-                'WARNING! Not stitching fork {} at the moment, because it is not surrounded by other tiles'.format(
+            logging.warning('Not stitching fork {} at the moment, because it is not surrounded by other tiles'.format(
                     annotation_name))
 
     # return the annotation_tiles dictionary that now contains the information about whether a fork was stitched and
@@ -163,8 +161,12 @@ def save_annotation_info_to_csv(annotation_tiles, csv_path):
 def main():
     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
     project_name = '8330_siNeg_CPT_3rd'
+    # project_name = 'siXRCC3_CPT_3rd_2ul'
     project_folder_path = os.path.join(base_path + project_name)
-    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_CPT_3rd_2ul/'
+    logging.basicConfig(filename=Path(base_path) / (project_name + '.log'), level=logging.INFO,
+                        format='%(asctime)s %(message)s')
+    logging.info('Processing experiment {}'.format(project_name))
+    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects//'
     stitch_radius = 1
 
     # Check if a folder for the stitched forks already exists. If not, create that folder
@@ -177,7 +179,7 @@ def main():
     parser = sites_of_interest_parser.Xml_MAPS_Parser(project_folder=project_folder_path, position_to_use=0,
                                                       name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
     parser.parse_xml()
-    print(parser.annotation_tiles['fork74'])
+    # print(parser.annotation_tiles['fork74'])
 
     csv_path = '/Users/Joel/Desktop/' + project_name + '.csv'
 
