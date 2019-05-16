@@ -4,6 +4,8 @@ import shutil
 import os
 from pathlib import Path
 import pandas as pd
+import re
+import numpy as np
 
 def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
     # This function takes the parser object containing all the information about the MAPS project and its annotations.
@@ -12,7 +14,7 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
     # Stitching plugin only runs when the local Fiji installation is being used. When a current imageJ gateway
     # is used, it does not find the plugin
     # ij = imagej.init('sc.fiji:fiji')
-    ij = imagej.init('/Applications/Fiji.app')
+    # ij = imagej.init('/Applications/Fiji.app')
     for annotation_name in xml_parser.annotation_tiles:
         number_existing_neighbor_tiles = sum(xml_parser.annotation_tiles[annotation_name]['surrounding_tile_exists'])
         # If the image files for the 8 neighbors and the tile exist, stitch the images
@@ -26,6 +28,15 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
 
             index_x = int(center_filename[9:12]) - stitch_radius
             index_y = int(center_filename[5:8]) - stitch_radius
+            # args = {'type': '[Filename defined position]', 'order': '[Defined by filename         ]',
+            #         'grid_size_x': '3', 'grid_size_y': '3', 'tile_overlap': '8', 'first_file_index_x': str(index_x),
+            #         'first_file_index_y': str(index_y), 'directory': img_path,
+            #         'file_names': 'Tile_{yyy}-{xxx}-000000_0-000.tif', 'output_textfile_name': 'TileConfiguration.txt',
+            #         'fusion_method': '[Intensity of random input tile]', 'regression_threshold': '0.15',
+            #         'max/avg_displacement_threshold': '0.20', 'absolute_displacement_threshold': '0.30',
+            #         'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
+            #         'image_output': '[Write to disk]'}
+
             args = {'type': '[Filename defined position]', 'order': '[Defined by filename         ]',
                     'grid_size_x': '3', 'grid_size_y': '3', 'tile_overlap': '8', 'first_file_index_x': str(index_x),
                     'first_file_index_y': str(index_y), 'directory': img_path,
@@ -35,21 +46,37 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
                     'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
                     'image_output': '[Write to disk]'}
 
-            ij.py.run_plugin(plugin, args)
-
-            output_filename = annotation_name + '.tiff'
-            shutil.move(img_path / 'img_t1_z1_c1', output_path / output_filename)
-
-            # TODO: Get the information about how much the center image has been shifted, where the fork is placed in
-            # the stitched image (add to xml_parser.annotation_tiles)
+            # ij.py.run_plugin(plugin, args)
 
             # TODO: Add an 8 bit export option => change from direct saving to saving via ij.py call
+
+
+
+            # output_filename = annotation_name + '.tiff'
+            # shutil.move(img_path / 'img_t1_z1_c1', output_path / output_filename)
+
+            # Get the information about how much the center image has been shifted, where the fork is placed in
+            # the stitched image
+            config_path_registered = img_path / 'TileConfiguration.registered.txt'
+            with open(config_path_registered, 'r') as f:
+                stitching_config = f.read()
+
+            original_annotation_coord = [xml_parser.annotation_tiles[annotation_name]['Annotation_img_position_x'],
+                                         xml_parser.annotation_tiles[annotation_name]['Annotation_img_position_y']]
+            stitched_annotation_coordinates = check_stitching_result(stitching_config, original_annotation_coord)  # , xml_parser.img_width, xml_parser.img_height
+            print(stitched_annotation_coordinates)
+
+            xml_parser.annotation_tiles[annotation_name]['Stitched_annotation_img_position_x'] = \
+                stitched_annotation_coordinates[0]
+            xml_parser.annotation_tiles[annotation_name]['Stitched_annotation_img_position_y'] = \
+                stitched_annotation_coordinates[1]
+            break
 
             # TODO: Add an arrow to the image
 
         else:
             # TODO: Potentially implement stitching for edge-cases of non 3x3 tiles
-            # TODO: Change warning to some log entry (print console is full of fiji stitching info
+            # TODO: Change warning to some log entry (print console is full of fiji stitching info)
             print(
                 'WARNING! Not stitching fork {} at the moment, because it is not surrounded by other tiles'.format(
                     annotation_name))
@@ -57,6 +84,25 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
     # return the annotation_tiles dictionary that now contains the information about whether a fork was stitched and
     # where the fork is in the stitched image
     return xml_parser.annotation_tiles
+
+
+def check_stitching_result(stitching_config, annotation_coordinates):
+    nb_files = 9
+    stitch_coord_strings = re.findall('\(([^\)]+)\)', stitching_config)
+    assert(len(stitch_coord_strings) == nb_files)
+    stitch_coordinates = np.zeros((nb_files, 2))
+    for i, coordinates in enumerate(stitch_coord_strings):
+        stitch_coordinates[i, 0] = round(float(coordinates.split(',')[0]))
+        stitch_coordinates[i, 1] = round(float(coordinates.split(',')[1]))
+    # print(stitch_coordinates)
+    min_coords = np.min(stitch_coordinates, axis=0)
+    # max_coords = np.max(stitch_coordinates, axis=0) + [4096, 4096]
+    # img_size = max_coords - min_coords
+    # print(img_size)
+
+    stitched_annotation_coordinates = annotation_coordinates + stitch_coordinates[4, :] - min_coords
+
+    return stitched_annotation_coordinates.astype(int)
 
 
 def save_annotation_info_to_csv(annotation_tiles, csv_path):
@@ -77,7 +123,6 @@ def save_annotation_info_to_csv(annotation_tiles, csv_path):
                                    'list for ssDNA at junction (nt)']
     header_addition = list(list(annotation_tiles.values())[0].keys())
     header_addition.remove('surrounding_tile_exists')
-    print(base_header)
     csv_header = pd.DataFrame(columns=base_header + header_addition)
     csv_header.to_csv(csv_path, index=False)
 
@@ -119,9 +164,11 @@ def main():
 
     csv_path = '/Users/Joel/Desktop/' + project_name + '.csv'
 
-    save_annotation_info_to_csv(parser.annotation_tiles, csv_path)
+    annotation_tiles = stitch_annotated_tiles(xml_parser=parser, output_path=output_path, stitch_radius=stitch_radius)
 
-    # annotation_tiles = stitch_annotated_tiles(xml_parser=parser, output_path=output_path, stitch_radius=stitch_radius)
+    # save_annotation_info_to_csv(parser.annotation_tiles, csv_path)
+    # save_annotation_info_to_csv(annotation_tiles, csv_path)
+
 
 
 if __name__ == "__main__":

@@ -31,6 +31,9 @@ class Xml_MAPS_Parser():
         self.annotation_tiles = {}
         self.stitch_radius = stitch_radius
         self.pixel_size = 0
+
+        # Usage of width and height may be switched, as Talos images are always square and
+        # I couldn't test non-square images
         self.img_height = 0
         self.img_width = 0
 
@@ -350,7 +353,7 @@ class Xml_MAPS_Parser():
                                                           relative_y_stepsize[1] * relative_x_stepsize[0])
 
                 except ZeroDivisionError:
-                    # TODO: Change warning to some log entry (print console is full of fiji stitching info
+                    # TODO: Change warning to some log entry (print console is full of fiji stitching info)
                     print('WARNING! Formula for the calculation of the annotation position within the image does not '
                           'work for these parameters, a rotation of {} leads to divison by 0. The annotation marker is '
                           'placed in the middle of the image because the location could not be calculated'
@@ -401,14 +404,14 @@ def main():
     pass
     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/8330_siNeg_CPT_3rd/'
     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_CPT_3rd_2ul/'
-    project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_HU_1st_y1/'
-
-    highmag_layer = 'highmag'
-    parser = Xml_MAPS_Parser(project_folder=project_folder_path, position_to_use=0,
-                             name_of_highmag_layer=highmag_layer, stitch_radius=1)
-
-    parser.parse_xml()
-    print(parser.annotation_tiles)
+    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_HU_1st_y1/'
+    #
+    # highmag_layer = 'highmag'
+    # parser = Xml_MAPS_Parser(project_folder=project_folder_path, position_to_use=0,
+    #                          name_of_highmag_layer=highmag_layer, stitch_radius=1)
+    #
+    # parser.parse_xml()
+    # print(parser.annotation_tiles)
 
     #
     # for annotation_name in parser.annotation_tiles:
