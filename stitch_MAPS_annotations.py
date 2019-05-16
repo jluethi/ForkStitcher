@@ -6,23 +6,25 @@ from pathlib import Path
 import pandas as pd
 import re
 import numpy as np
+import cv2
 
-def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
+def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight_bit = False):
     # This function takes the parser object containing all the information about the MAPS project and its annotations.
     # It the performs stitching
     # TODO: Find a way to call the Fiji stitching without falling back to the local Fiji library
     # Stitching plugin only runs when the local Fiji installation is being used. When a current imageJ gateway
-    # is used, it does not find the plugin
-    # ij = imagej.init('sc.fiji:fiji')
-    # ij = imagej.init('/Applications/Fiji.app')
-    for annotation_name in xml_parser.annotation_tiles:
-        number_existing_neighbor_tiles = sum(xml_parser.annotation_tiles[annotation_name]['surrounding_tile_exists'])
+    # is used, it does not find the plugin. Maybe have a distinct local Fiji installation that is hidden otherwise?
+    # I also asked in the pyimagej github issues, maybe there will be a response there
+    # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10')
+    ij = imagej.init('/Applications/Fiji.app')
+    for annotation_name in annotation_tiles:
+        number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
         # If the image files for the 8 neighbors and the tile exist, stitch the images
         if number_existing_neighbor_tiles == 9:
             print('Stitching {}'.format(annotation_name))
-            center_filename = xml_parser.annotation_tiles[annotation_name]['filename']
+            center_filename = annotation_tiles[annotation_name]['filename']
 
-            img_path = xml_parser.annotation_tiles[annotation_name]['img_path']
+            img_path = annotation_tiles[annotation_name]['img_path']
 
             plugin = 'Grid/Collection stitching'
 
@@ -36,6 +38,11 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
             #         'max/avg_displacement_threshold': '0.20', 'absolute_displacement_threshold': '0.30',
             #         'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
             #         'image_output': '[Write to disk]'}
+            # ij.py.run_plugin(plugin, args)
+            # shutil.move(img_path / 'img_t1_z1_c1', output_path / output_filename)
+
+
+            # TODO: Test if 'Save computation time (but use more RAM)' option speeds up the stitching
 
             args = {'type': '[Filename defined position]', 'order': '[Defined by filename         ]',
                     'grid_size_x': '3', 'grid_size_y': '3', 'tile_overlap': '8', 'first_file_index_x': str(index_x),
@@ -44,16 +51,25 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
                     'fusion_method': '[Intensity of random input tile]', 'regression_threshold': '0.15',
                     'max/avg_displacement_threshold': '0.20', 'absolute_displacement_threshold': '0.30',
                     'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
-                    'image_output': '[Write to disk]'}
+                    'image_output': '[Fuse and display]'}
 
-            # ij.py.run_plugin(plugin, args)
+            ij.py.run_plugin(plugin, args)
 
-            # TODO: Add an 8 bit export option => change from direct saving to saving via ij.py call
+            # Load an image into python
+            from jnius import autoclass
+            WindowManager = autoclass('ij.WindowManager')
+            stitched_img = WindowManager.getCurrentImage()
+            stitched_img_python = ij.py.from_java(stitched_img)
 
+            output_filename = annotation_name + '.png'
 
-
-            # output_filename = annotation_name + '.tiff'
-            # shutil.move(img_path / 'img_t1_z1_c1', output_path / output_filename)
+            # Save the image
+            if eight_bit:
+                eight_bit_img = (stitched_img_python - np.min(stitched_img_python)) / \
+                                (np.max(stitched_img_python) - np.min(stitched_img_python)) * 256
+                cv2.imwrite(str(output_path / output_filename), eight_bit_img.astype('uint8'))
+            else:
+                cv2.imwrite(str(output_path / output_filename), stitched_img_python.astype('uint16'))
 
             # Get the information about how much the center image has been shifted, where the fork is placed in
             # the stitched image
@@ -61,16 +77,19 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
             with open(config_path_registered, 'r') as f:
                 stitching_config = f.read()
 
-            original_annotation_coord = [xml_parser.annotation_tiles[annotation_name]['Annotation_img_position_x'],
-                                         xml_parser.annotation_tiles[annotation_name]['Annotation_img_position_y']]
-            stitched_annotation_coordinates = check_stitching_result(stitching_config, original_annotation_coord)  # , xml_parser.img_width, xml_parser.img_height
+            original_annotation_coord = [annotation_tiles[annotation_name]['Annotation_img_position_x'],
+                                         annotation_tiles[annotation_name]['Annotation_img_position_y']]
+            stitched_annotation_coordinates = check_stitching_result(stitching_config, original_annotation_coord)
             print(stitched_annotation_coordinates)
 
-            xml_parser.annotation_tiles[annotation_name]['Stitched_annotation_img_position_x'] = \
+            annotation_tiles[annotation_name]['Stitched_annotation_img_position_x'] = \
                 stitched_annotation_coordinates[0]
-            xml_parser.annotation_tiles[annotation_name]['Stitched_annotation_img_position_y'] = \
+            annotation_tiles[annotation_name]['Stitched_annotation_img_position_y'] = \
                 stitched_annotation_coordinates[1]
             break
+
+            # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with changed
+            #  parameters or by putting the individual images in a folder so that they could be stitched manually)
 
             # TODO: Add an arrow to the image
 
@@ -83,7 +102,7 @@ def stitch_annotated_tiles(xml_parser, output_path, stitch_radius=1):
 
     # return the annotation_tiles dictionary that now contains the information about whether a fork was stitched and
     # where the fork is in the stitched image
-    return xml_parser.annotation_tiles
+    return annotation_tiles
 
 
 def check_stitching_result(stitching_config, annotation_coordinates):
@@ -94,13 +113,11 @@ def check_stitching_result(stitching_config, annotation_coordinates):
     for i, coordinates in enumerate(stitch_coord_strings):
         stitch_coordinates[i, 0] = round(float(coordinates.split(',')[0]))
         stitch_coordinates[i, 1] = round(float(coordinates.split(',')[1]))
-    # print(stitch_coordinates)
     min_coords = np.min(stitch_coordinates, axis=0)
-    # max_coords = np.max(stitch_coordinates, axis=0) + [4096, 4096]
-    # img_size = max_coords - min_coords
-    # print(img_size)
 
     stitched_annotation_coordinates = annotation_coordinates + stitch_coordinates[4, :] - min_coords
+
+    # TODO: Calculate distance between all stitched positions to find potential issues
 
     return stitched_annotation_coordinates.astype(int)
 
@@ -164,7 +181,8 @@ def main():
 
     csv_path = '/Users/Joel/Desktop/' + project_name + '.csv'
 
-    annotation_tiles = stitch_annotated_tiles(xml_parser=parser, output_path=output_path, stitch_radius=stitch_radius)
+    annotation_tiles = stitch_annotated_tiles(annotation_tiles=parser.annotation_tiles, output_path=output_path,
+                                              stitch_radius=stitch_radius, eight_bit=True)
 
     # save_annotation_info_to_csv(parser.annotation_tiles, csv_path)
     # save_annotation_info_to_csv(annotation_tiles, csv_path)
