@@ -9,21 +9,48 @@ from pathlib import Path
 import logging
 
 
-class Xml_MAPS_Parser():
+class MapsXmlParser:
+    """
+    XML Parser class that processes MAPS XMLs and reveals the image tiles belonging to each annotation
 
-    def __init__(self, project_folder, name_of_highmag_layer='highmag', position_to_use=0, stitch_radius=1):
-        self.project_folder_path = Path(project_folder)
-        self.name_of_highmag_layer = name_of_highmag_layer
+    This class takes XML files from the Thermo MAPS Application, extracts the location of all its annotations and
+    compares it to the location of all the image tiles. This gets a bit more complicated, because tiles only have a
+    relative position in pixels within their layers and those layers are (potentially) turned at arbitrary angles
+    relative to the global coordinate system (which is in meters).
+    It is important that the functions are run in the correct order to extract & process this information. Therefore,
+    use it by initializing the class and the calling parser.parse_xml().
 
-        # In the samples I had, MAPS didn't show any aligned positions. Therefore, unaligned positions is what
-        # we want to extract. If positions are moved somehow in MAPS (I assume through stitching),
-        # calculatedPositions may be revelant
-        potential_positions_to_extract = ['UnalignedPosition', 'CalculatedPosition']
-        self.position_to_extract = potential_positions_to_extract[position_to_use]
+    Args:
+        project_folder (str): The path to the project folder of the MAPS project, containing the XML file, as a string
+        name_of_highmag_layer (str): Name of the image layer in MAPS for which tiles containing annotations should
+            be found
+        use_unregistered_pos (bool): Whether to use the unregistered position of the tiles (where MAPS thinks it
+            acquired them) or a calculated position (e.g. through stitching in MAPS) should be used for the tiles
+        stitch_radius (int): How many images in each direction from the tile containing the annotation should be
+            stitched. Parser doesn't do the stitching, just extracts relevant information about neighboring tiles.
+            Defaults to 1 => 3x3 images would be stitched.
+
+    Attributes:
+        project_folder_path (str): The path to the project folder of the MAPS project, containing the XML file, as a
+            string
+        squares (dict): Contains information about the squares / the separate acquisitions. The keys are local paths to
+            the metadata about the square and the values are dictionaries again. Each square contains the information
+            about StagePosition_center_x, StagePosition_center_y, rotation, columns, overlapHorizontal, overlapVertical,
+            rows, tileHfw, totalHfw, square_name, tileVfw, StagePosition_corner_x and StagePosition_corner_y.
+
+    """
+    def __init__(self, project_folder: str, name_of_highmag_layer: str = 'highmag', use_unregistered_pos: bool = True,
+                 stitch_radius: int = 1):
+
         xml_file_name = 'MapsProject.xml'
-
+        self.project_folder_path = Path(project_folder)
+        self._name_of_highmag_layer = name_of_highmag_layer
+        if use_unregistered_pos:
+            self._position_to_extract = 'UnalignedPosition'
+        else:
+            self._position_to_extract = 'CalculatedPosition'
         xml_file_path = self.project_folder_path / xml_file_name
-        self.xml_file = self.load_xml(xml_file_path)
+        self._xml_file = self.load_xml(xml_file_path)
         self.squares = {}
         self.tiles = {}
         self.annotations = {}
@@ -75,14 +102,14 @@ class Xml_MAPS_Parser():
 
     def extract_square_metadata(self):
         # Extract the information about all the squares (high magnification acquisition layers)
-        for child in self.xml_file:
+        for child in self._xml_file:
             if child.tag.endswith('LayerGroups'):
                 for grand_child in child:
                     for ggc in grand_child:
 
                         # Get the path to the metadata xml files for all the highmag squares,
                         # the pixel size and the StagePosition of the square
-                        if ggc.tag.endswith('displayName') and ggc.text == self.name_of_highmag_layer:
+                        if ggc.tag.endswith('displayName') and ggc.text == self._name_of_highmag_layer:
                             logging.info('Extracting images from {} layer'.format(ggc.text))
 
                             for highmag in grand_child:
@@ -142,7 +169,7 @@ class Xml_MAPS_Parser():
                                                                     raise Exception(
                                                                         'Image height needs to be constant for the whole {}'
                                                                         'layer. It was {} before and is {} in the current '
-                                                                        'square'.format(self.name_of_highmag_layer,
+                                                                        'square'.format(self._name_of_highmag_layer,
                                                                                         self.img_height, height))
                                                             if scanres_info.tag.endswith('width'):
                                                                 width = int(scanres_info.text)
@@ -152,7 +179,7 @@ class Xml_MAPS_Parser():
                                                                     raise Exception(
                                                                         'Image width needs to be constant for the whole {} '
                                                                         'layer. It was {} before and is {} in the current '
-                                                                        'square'.format(self.name_of_highmag_layer,
+                                                                        'square'.format(self._name_of_highmag_layer,
                                                                                         self.img_width, width))
 
                                                     if layer_content.tag.endswith('pixelSize'):
@@ -163,7 +190,7 @@ class Xml_MAPS_Parser():
                                                             raise Exception('Pixel size needs to be constant for the whole '
                                                                             '{} layer. It was {} before and is {} in the '
                                                                             'current square'.format(
-                                                                self.name_of_highmag_layer, self.pixel_size, pixel_size))
+                                                                self._name_of_highmag_layer, self.pixel_size, pixel_size))
 
                                                     if layer_content.tag.endswith('StagePosition'):
                                                         for positon_info in layer_content:
@@ -182,7 +209,7 @@ class Xml_MAPS_Parser():
     def extract_annotation_locations(self):
         # Get all x & y positions of the annotations & the annotation name and save them in a dictionary.
         # Keys are the annotation names, values are a dictionary of x & y positions of that annotation
-        for child in self.xml_file:
+        for child in self._xml_file:
             if child.tag.endswith('LayerGroups'):
                 for grand_child in child:
                     for ggc in grand_child:
@@ -242,7 +269,7 @@ class Xml_MAPS_Parser():
                                                     if value.tag.endswith('PositioningDetails'):
                                                         for positioning_detail in value:
                                                             if positioning_detail.tag.endswith(
-                                                                    self.position_to_extract):
+                                                                    self._position_to_extract):
                                                                 for position in positioning_detail:
 
                                                                     if position.tag == '{http://schemas.datacontract.org/2004/07/System.Drawing}x':
@@ -407,7 +434,7 @@ def main():
     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_HU_1st_y1/'
     #
     # highmag_layer = 'highmag'
-    # parser = Xml_MAPS_Parser(project_folder=project_folder_path, position_to_use=0,
+    # parser = MapsXmlParser(project_folder=project_folder_path, position_to_use=0,
     #                          name_of_highmag_layer=highmag_layer, stitch_radius=1)
     #
     # parser.parse_xml()

@@ -1,23 +1,27 @@
-import sites_of_interest_parser
-import imagej
-import shutil
+import logging
 import os
 from pathlib import Path
 import pandas as pd
 import re
 import numpy as np
-import cv2
-import logging
+# import cv2
+# import shutil
 
-def stitch_annotated_tiles(annotation_tiles, output_path, pixel_size, stitch_radius=1, eight_bit = False):
+import imagej
+
+from sites_of_interest_parser import MapsXmlParser
+
+
+def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size: float, stitch_radius: int = 1,
+                           eight_bit: bool = False):
     # This function takes the parser object containing all the information about the MAPS project and its annotations.
     # It the performs stitching
     # TODO: Find a way to call the Fiji stitching without falling back to the local Fiji library
     # Stitching plugin only runs when the local Fiji installation is being used. When a current imageJ gateway
     # is used, it does not find the plugin. Maybe have a distinct local Fiji installation that is hidden otherwise?
-    # Maven-based initialization doesn't currently work for ImageJ1 plugins like Grid stitching, but may be
-    # implemented in the future (see https://github.com/imagej/pyimagej/issues/36). If Maven initialization works that
-    # would be the optimal solution
+    # Maven-based initialization doesn't currently work for ImageJ1 plugins like Grid stitching, but I can use lower
+    # level Java APIs directly via pyimagej. Wait for necessary fixes in
+    # https://forum.image.sc/t/using-imagej-functions-like-type-conversion-and-setting-pixel-size-via-pyimagej/25755/10
     # Maven initialization
     # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10')
 
@@ -53,7 +57,7 @@ def stitch_annotated_tiles(annotation_tiles, output_path, pixel_size, stitch_rad
             # IJ.run(resultImp, "8-bit")
 
 
-            # TODO: Test if 'Save computation time (but use more RAM)' option speeds up the stitching
+            # Potentially: Test if 'Save computation time (but use more RAM)' option speeds up the stitching
             plugin = 'Grid/Collection stitching'
             index_x = int(center_filename[9:12]) - stitch_radius
             index_y = int(center_filename[5:8]) - stitch_radius
@@ -75,7 +79,7 @@ def stitch_annotated_tiles(annotation_tiles, output_path, pixel_size, stitch_rad
             WindowManager = autoclass('ij.WindowManager')
             stitched_img = WindowManager.getCurrentImage()
 
-            # Set the pixel size
+            # Set the pixel size. Fiji seems to round 0.499 nm to 0.5 nm and I can't see anything I can do about that
             pixel_size_nm = str(pixel_size * 10e8)
             pixel_size_command = "channels=1 slices=1 frames=1 unit=nm pixel_width=" + pixel_size_nm + \
                                  " pixel_height=" + pixel_size_nm + " voxel_depth=1.0 global"
@@ -88,9 +92,9 @@ def stitch_annotated_tiles(annotation_tiles, output_path, pixel_size, stitch_rad
             # Convert it to an ImageJ2 dataset. It was an imageJ1 ImagePlus before and the save function can't handle
             # that. See: https://github.com/imagej/pyimagej/issues/35
             stitched_img_dataset = ij.py.to_dataset(stitched_img)
-            ij.io().save(stitched_img_dataset, '/Users/Joel/Desktop/test4.png')
 
-            break
+            output_filename = annotation_name + '.png'
+            ij.io().save(stitched_img_dataset, str(output_path / output_filename))
 
             # Get the information about how much the center image has been shifted, where the fork is placed in
             # the stitched image
@@ -102,11 +106,15 @@ def stitch_annotated_tiles(annotation_tiles, output_path, pixel_size, stitch_rad
                                          annotation_tiles[annotation_name]['Annotation_img_position_y']]
             stitched_annotation_coordinates = check_stitching_result(stitching_config, original_annotation_coord)
 
+            # Add the information about where the fork is in the stitched image back to the dictionary, such that it
+            # can be saved to csv afterwards
             annotation_tiles[annotation_name]['Stitched_annotation_img_position_x'] = \
                 stitched_annotation_coordinates[0]
             annotation_tiles[annotation_name]['Stitched_annotation_img_position_y'] = \
                 stitched_annotation_coordinates[1]
 
+            # Stop here for testing purposes. Runs fine through whole dataset
+            break
 
             # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with changed
             #  parameters or by putting the individual images in a folder so that they could be stitched manually)
@@ -200,16 +208,16 @@ def main():
     os.makedirs(str(output_path), exist_ok=True)
 
     highmag_layer = 'highmag'
-    parser = sites_of_interest_parser.Xml_MAPS_Parser(project_folder=project_folder_path, position_to_use=0,
-                                                      name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
+    parser = MapsXmlParser(project_folder=project_folder_path, use_unregistered_pos=True,
+                           name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
     parser.parse_xml()
     # print(parser.annotation_tiles['fork74'])
 
     csv_path = '/Users/Joel/Desktop/' + project_name + '.csv'
 
-    annotation_tiles = stitch_annotated_tiles(annotation_tiles=parser.annotation_tiles, output_path=output_path,
-                                              pixel_size = parser.pixel_size, stitch_radius=stitch_radius,
-                                              eight_bit=True)
+    # annotation_tiles = stitch_annotated_tiles(annotation_tiles=parser.annotation_tiles, output_path=output_path,
+    #                                           pixel_size = parser.pixel_size, stitch_radius=stitch_radius,
+    #                                           eight_bit=True)
 
     # save_annotation_info_to_csv(parser.annotation_tiles, csv_path)
     # save_annotation_info_to_csv(annotation_tiles, csv_path)
