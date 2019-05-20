@@ -9,7 +9,7 @@ import numpy as np
 import cv2
 import logging
 
-def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight_bit = False):
+def stitch_annotated_tiles(annotation_tiles, output_path, pixel_size, stitch_radius=1, eight_bit = False):
     # This function takes the parser object containing all the information about the MAPS project and its annotations.
     # It the performs stitching
     # TODO: Find a way to call the Fiji stitching without falling back to the local Fiji library
@@ -35,24 +35,28 @@ def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight
 
             img_path = annotation_tiles[annotation_name]['img_path']
 
-            plugin = 'Grid/Collection stitching'
+            # TODO: Change to running plugin with lower level APIs, directly extracting the stitching configuration.
+            # See here: https://github.com/imagej/pyimagej/issues/35
 
-            index_x = int(center_filename[9:12]) - stitch_radius
-            index_y = int(center_filename[5:8]) - stitch_radius
-            # args = {'type': '[Filename defined position]', 'order': '[Defined by filename         ]',
-            #         'grid_size_x': '3', 'grid_size_y': '3', 'tile_overlap': '8', 'first_file_index_x': str(index_x),
-            #         'first_file_index_y': str(index_y), 'directory': img_path,
-            #         'file_names': 'Tile_{yyy}-{xxx}-000000_0-000.tif', 'output_textfile_name': 'TileConfiguration.txt',
-            #         'fusion_method': '[Intensity of random input tile]', 'regression_threshold': '0.15',
-            #         'max/avg_displacement_threshold': '0.20', 'absolute_displacement_threshold': '0.30',
-            #         'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
-            #         'image_output': '[Write to disk]'}
-            # ij.py.run_plugin(plugin, args)
-            # shutil.move(img_path / 'img_t1_z1_c1', output_path / output_filename)
+            # load images: figure out how to load multiple images into the same container
+
+            # Define starting positions
+            # positions = [[0, 0], [0, 100], [100, 0], [100, 100]]
+
+            # dimensionality = 2
+            # computeOverlap = True
+            # StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
+            # models = StitchingUtils.computeStitching(imps, positions, dimensionality, computeOverlap)
+            #
+            # resultImp = StitchingUtils.fuseTiles(imps, models, dimensionality)
+            #
+            # IJ.run(resultImp, "8-bit")
 
 
             # TODO: Test if 'Save computation time (but use more RAM)' option speeds up the stitching
-
+            plugin = 'Grid/Collection stitching'
+            index_x = int(center_filename[9:12]) - stitch_radius
+            index_y = int(center_filename[5:8]) - stitch_radius
             args = {'type': '[Filename defined position]', 'order': '[Defined by filename         ]',
                     'grid_size_x': '3', 'grid_size_y': '3', 'tile_overlap': '8', 'first_file_index_x': str(index_x),
                     'first_file_index_y': str(index_y), 'directory': img_path,
@@ -61,56 +65,32 @@ def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight
                     'max/avg_displacement_threshold': '0.20', 'absolute_displacement_threshold': '0.30',
                     'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
                     'image_output': '[Fuse and display]'}
-
-            # TODO: Change to running plugin with lower level APIs, directly extracting the stitching configuration.
-            # See here: https://github.com/imagej/pyimagej/issues/35
             ij.py.run_plugin(plugin, args)
 
-            # TODO: Figure out a way to set the pixel size of the stitched image
-
             # Use imageJ to set bit depth, pixel size & save the image.
-            # if eight_bit:
-            #     # Convert is in the services:
-            #     ij.convert('8-bit')
-
             from jnius import autoclass
+            IJ = autoclass('ij.IJ')
+
             # Get the open window with the stitched image
             WindowManager = autoclass('ij.WindowManager')
             stitched_img = WindowManager.getCurrentImage()
 
+            # Set the pixel size
+            pixel_size_nm = str(pixel_size * 10e8)
+            pixel_size_command = "channels=1 slices=1 frames=1 unit=nm pixel_width=" + pixel_size_nm + \
+                                 " pixel_height=" + pixel_size_nm + " voxel_depth=1.0 global"
+            IJ.run(stitched_img, "Properties...", pixel_size_command)
+
+            # Convert to 8 bit
+            if eight_bit:
+                IJ.run(stitched_img, "8-bit", "")
+
             # Convert it to an ImageJ2 dataset. It was an imageJ1 ImagePlus before and the save function can't handle
             # that. See: https://github.com/imagej/pyimagej/issues/35
             stitched_img_dataset = ij.py.to_dataset(stitched_img)
-            ij.io().save(stitched_img_dataset, '/Users/Joel/Desktop/test2.png')
-
-
-            # macro = 'run("Properties...", "channels=1 slices=1 frames=1 unit=nm pixel_width=0.5 pixel_height=0.5 voxel_depth=0.5");'
-            # args = {}
-            # ij.py.run_macro(macro, args)
-            # IJ.run(imp, "Properties...",
-            #        "channels=1 slices=1 frames=1 unit=nm pixel_width=0.5000000 pixel_height=0.5000000 voxel_depth=0.5000000");
-            # ij.op().run("Properties", snowflake, "channels=1 slices=1 frames=1 unit=nm pixel_width=0.5000000 pixel_height=0.5000000 voxel_depth=0.5000000")
+            ij.io().save(stitched_img_dataset, '/Users/Joel/Desktop/test4.png')
 
             break
-
-            # Use python for set bit depth, pixel size & saving the image
-            # Downside: Have not found a way to set pixel size. OpenCV doesn't touch metadata. py3exiv2
-            # or GExiv2 may get that job done, but I can't figure out how
-            # Load an image into python
-            from jnius import autoclass
-            WindowManager = autoclass('ij.WindowManager')
-            stitched_img = WindowManager.getCurrentImage()
-            stitched_img_python = ij.py.from_java(stitched_img)
-
-            output_filename = annotation_name + '.png'
-
-            # Save the image
-            if eight_bit:
-                eight_bit_img = (stitched_img_python - np.min(stitched_img_python)) / \
-                                (np.max(stitched_img_python) - np.min(stitched_img_python)) * 256
-                cv2.imwrite(str(output_path / output_filename), eight_bit_img.astype('uint8'))
-            else:
-                cv2.imwrite(str(output_path / output_filename), stitched_img_python.astype('uint16'))
 
             # Get the information about how much the center image has been shifted, where the fork is placed in
             # the stitched image
@@ -178,6 +158,7 @@ def save_annotation_info_to_csv(annotation_tiles, csv_path):
                                    'list for ssDNA at junction (nt)']
     header_addition = list(list(annotation_tiles.values())[0].keys())
     header_addition.remove('surrounding_tile_exists')
+    header_addition.remove('surrounding_tile_names')
     csv_header = pd.DataFrame(columns=base_header + header_addition)
     csv_header.to_csv(csv_path, index=False)
 
@@ -192,6 +173,9 @@ def save_annotation_info_to_csv(annotation_tiles, csv_path):
 
         if 'surrounding_tile_exists' in current_annotation:
             del current_annotation['surrounding_tile_exists']
+
+        if 'surrounding_tile_names' in current_annotation:
+            del current_annotation['surrounding_tile_names']
 
         current_annotation_pd = pd.DataFrame(current_annotation, index=[0])
         with open(csv_path, 'a') as f:
@@ -224,7 +208,8 @@ def main():
     csv_path = '/Users/Joel/Desktop/' + project_name + '.csv'
 
     annotation_tiles = stitch_annotated_tiles(annotation_tiles=parser.annotation_tiles, output_path=output_path,
-                                              stitch_radius=stitch_radius, eight_bit=True)
+                                              pixel_size = parser.pixel_size, stitch_radius=stitch_radius,
+                                              eight_bit=True)
 
     # save_annotation_info_to_csv(parser.annotation_tiles, csv_path)
     # save_annotation_info_to_csv(annotation_tiles, csv_path)

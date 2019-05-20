@@ -124,11 +124,13 @@ class Xml_MAPS_Parser():
 
                                                     if layer_content.tag.endswith('rows'):
                                                         # noinspection PyUnboundLocalVariable
-                                                        self.squares[metadata_location]['rows'] = int(layer_content.text)
+                                                        self.squares[metadata_location]['rows'] = \
+                                                            int(layer_content.text)
 
                                                     if layer_content.tag.endswith('columns'):
                                                         # noinspection PyUnboundLocalVariable
-                                                        self.squares[metadata_location]['columns'] = int(layer_content.text)
+                                                        self.squares[metadata_location]['columns'] = \
+                                                            int(layer_content.text)
 
                                                     if layer_content.tag.endswith('scanResolution'):
                                                         for scanres_info in layer_content:
@@ -292,8 +294,8 @@ class Xml_MAPS_Parser():
                                                     self.pixel_size * math.cos(
                                                         current_square['rotation'] / 180 * math.pi)])
 
-                    # absolute_tile_pos is the position of the corner of the tile in absolute Stage Position coordinates,
-                    # the tile_center_stage_position are the Stage Position coordinates of the tile
+                    # absolute_tile_pos is the position of the corner of the tile in absolute Stage Position
+                    # coordinates, the tile_center_stage_position are the Stage Position coordinates of the tile
                     absolute_tile_pos = relative_0 + current_tile['RelativeTilePosition_x'] * relative_x_stepsize + \
                                         current_tile[
                                             'RelativeTilePosition_y'] * relative_y_stepsize
@@ -378,7 +380,7 @@ class Xml_MAPS_Parser():
         for annotation_name in self.annotation_tiles:
             center_filename = self.annotation_tiles[annotation_name]['filename']
 
-            # self.annotation_tiles[annotation_name]['surrounding_tile_names']=[]
+            self.annotation_tiles[annotation_name]['surrounding_tile_names'] = []
             self.annotation_tiles[annotation_name]['surrounding_tile_exists'] = []
 
             x = int(center_filename[5:8])
@@ -387,7 +389,7 @@ class Xml_MAPS_Parser():
                 for j in range(-self.stitch_radius, self.stitch_radius + 1):
                     # Create the filenames
                     new_filename = center_filename[:5] + f'{x+i:03}' + '-' + f'{y+j:03}' + center_filename[12:]
-                    # self.annotation_tiles[annotation_name]['surrounding_tile_names'].append(new_filename)
+                    self.annotation_tiles[annotation_name]['surrounding_tile_names'].append(new_filename)
 
                     # Check whether those files exist
                     img_path = self.annotation_tiles[annotation_name]['img_path'] / new_filename
