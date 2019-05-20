@@ -15,8 +15,16 @@ def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight
     # TODO: Find a way to call the Fiji stitching without falling back to the local Fiji library
     # Stitching plugin only runs when the local Fiji installation is being used. When a current imageJ gateway
     # is used, it does not find the plugin. Maybe have a distinct local Fiji installation that is hidden otherwise?
-    # I also asked in the pyimagej github issues, maybe there will be a response there
+    # Maven-based initialization doesn't currently work for ImageJ1 plugins like Grid stitching, but may be
+    # implemented in the future (see https://github.com/imagej/pyimagej/issues/36). If Maven initialization works that
+    # would be the optimal solution
+    # Maven initialization
     # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10')
+
+    # Maven initialization with stitching plugin wrappers
+    # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
+
+    # Local imageJ initialization
     ij = imagej.init('/Applications/Fiji.app')
     for annotation_name in annotation_tiles:
         number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
@@ -54,8 +62,40 @@ def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight
                     'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
                     'image_output': '[Fuse and display]'}
 
+            # TODO: Change to running plugin with lower level APIs, directly extracting the stitching configuration.
+            # See here: https://github.com/imagej/pyimagej/issues/35
             ij.py.run_plugin(plugin, args)
 
+            # TODO: Figure out a way to set the pixel size of the stitched image
+
+            # Use imageJ to set bit depth, pixel size & save the image.
+            # if eight_bit:
+            #     # Convert is in the services:
+            #     ij.convert('8-bit')
+
+            from jnius import autoclass
+            # Get the open window with the stitched image
+            WindowManager = autoclass('ij.WindowManager')
+            stitched_img = WindowManager.getCurrentImage()
+
+            # Convert it to an ImageJ2 dataset. It was an imageJ1 ImagePlus before and the save function can't handle
+            # that. See: https://github.com/imagej/pyimagej/issues/35
+            stitched_img_dataset = ij.py.to_dataset(stitched_img)
+            ij.io().save(stitched_img_dataset, '/Users/Joel/Desktop/test2.png')
+
+
+            # macro = 'run("Properties...", "channels=1 slices=1 frames=1 unit=nm pixel_width=0.5 pixel_height=0.5 voxel_depth=0.5");'
+            # args = {}
+            # ij.py.run_macro(macro, args)
+            # IJ.run(imp, "Properties...",
+            #        "channels=1 slices=1 frames=1 unit=nm pixel_width=0.5000000 pixel_height=0.5000000 voxel_depth=0.5000000");
+            # ij.op().run("Properties", snowflake, "channels=1 slices=1 frames=1 unit=nm pixel_width=0.5000000 pixel_height=0.5000000 voxel_depth=0.5000000")
+
+            break
+
+            # Use python for set bit depth, pixel size & saving the image
+            # Downside: Have not found a way to set pixel size. OpenCV doesn't touch metadata. py3exiv2
+            # or GExiv2 may get that job done, but I can't figure out how
             # Load an image into python
             from jnius import autoclass
             WindowManager = autoclass('ij.WindowManager')
@@ -86,7 +126,7 @@ def stitch_annotated_tiles(annotation_tiles, output_path, stitch_radius=1, eight
                 stitched_annotation_coordinates[0]
             annotation_tiles[annotation_name]['Stitched_annotation_img_position_y'] = \
                 stitched_annotation_coordinates[1]
-            break
+
 
             # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with changed
             #  parameters or by putting the individual images in a folder so that they could be stitched manually)
