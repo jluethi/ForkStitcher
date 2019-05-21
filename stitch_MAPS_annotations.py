@@ -43,33 +43,33 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             # TODO: Change to running plugin with lower level APIs, directly extracting the stitching configuration.
             # See here: https://github.com/imagej/pyimagej/issues/35
 
-            # load images: figure out how to load multiple images into the same container
-            # BF = autoclass('ij.BioFormats')
-            # img = BF.open(str(img_path / center_filename))
-
-            ImagePlusClass = autoclass('ij.ImagePlus')
-            imagej2_img = ij.io().open(str(img_path / center_filename))
-            imps = [ij.convert().convert(imagej2_img, ImagePlusClass)]
-
-            for neighbor in annotation_tiles[annotation_name]['surrounding_tile_names']:
-                print(neighbor)
-                imagej2_img = ij.io().open(str(img_path / neighbor))
-                imps.append(ij.convert().convert(imagej2_img, ImagePlusClass))
-            print(type(imps))
-            print(imps)
-            # Define starting positions
-            positions = [[3686, 3686], [0, 0], [3686, 0], [7373, 0], [0, 3686], [7373, 3686], [0, 7373],
-                         [3686, 7373], [7373, 7373]]
-
-            dimensionality = 2
-            computeOverlap = True
-            StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
-            models = StitchingUtils.computeStitching(imps, positions, dimensionality, computeOverlap)
-
-            resultImp = StitchingUtils.fuseTiles(imps, models, dimensionality)
-
-            # Stop here for testing purposes. Runs fine through whole dataset
-            break
+            # # load images: figure out how to load multiple images into the same container
+            # # BF = autoclass('ij.BioFormats')
+            # # img = BF.open(str(img_path / center_filename))
+            #
+            # ImagePlusClass = autoclass('ij.ImagePlus')
+            # imagej2_img = ij.io().open(str(img_path / center_filename))
+            # imps = [ij.convert().convert(imagej2_img, ImagePlusClass)]
+            #
+            # for neighbor in annotation_tiles[annotation_name]['surrounding_tile_names']:
+            #     print(neighbor)
+            #     imagej2_img = ij.io().open(str(img_path / neighbor))
+            #     imps.append(ij.convert().convert(imagej2_img, ImagePlusClass))
+            # print(type(imps))
+            # print(imps)
+            # # Define starting positions
+            # positions = [[3686, 3686], [0, 0], [3686, 0], [7373, 0], [0, 3686], [7373, 3686], [0, 7373],
+            #              [3686, 7373], [7373, 7373]]
+            #
+            # dimensionality = 2
+            # computeOverlap = True
+            # StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
+            # models = StitchingUtils.computeStitching(imps, positions, dimensionality, computeOverlap)
+            #
+            # resultImp = StitchingUtils.fuseTiles(imps, models, dimensionality)
+            #
+            # # Stop here for testing purposes. Runs fine through whole dataset
+            # break
 
 
             # Potentially: Test if 'Save computation time (but use more RAM)' option speeds up the stitching
@@ -205,9 +205,10 @@ def save_annotation_info_to_csv(annotation_tiles, csv_path):
 def main():
     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
     project_name = '8330_siNeg_CPT_3rd'
-    # project_name = 'siXRCC3_CPT_3rd_2ul'
+    # project_name = '8330_siXRCC3_CPT_3rd_2ul'
+    # project_name = '8373_3_siXRCC3_HU_1st_y1'
     project_folder_path = os.path.join(base_path + project_name)
-    logging.basicConfig(filename=Path(base_path) / (project_name + '.log'), level=logging.INFO,
+    logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '.log'), level=logging.INFO,
                         format='%(asctime)s %(message)s')
     logging.info('Processing experiment {}'.format(project_name))
     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects//'

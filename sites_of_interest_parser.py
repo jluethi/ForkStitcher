@@ -136,7 +136,7 @@ class MapsXmlParser:
         self.get_relative_tile_locations()
         self.calculate_absolute_tile_coordinates()
         self.find_annotation_tile()
-        self.determine_surrounding_sites()
+        self.determine_surrounding_tiles()
         return self.annotation_tiles
 
     @staticmethod
@@ -193,8 +193,8 @@ class MapsXmlParser:
         between the tiles (overlapVertical, overlapHorizontal), the number of rows of tiles (images) in the layers
         (rows), the horizontal field width of each tile (its width in meters, tileHfw), the horizontal field width of
         the whole layers (its width in meters, totalHfw) and the name of the layers (layer_name).
-        In a later function, tileVfw, StagePosition_corner_x and StagePosition_corner_y are calculated and added to the
-        layers dictionary.
+        In a calculate_absolute_tile_coordinates, StagePosition_corner_x and StagePosition_corner_y are calculated and
+        added to the layers dictionary.
 
         Note:
             The parsing is quite ugly with all the if statements, because the tags have huge names and it's easier just
@@ -267,38 +267,44 @@ class MapsXmlParser:
                                                                     self.img_height = height
                                                                 else:
                                                                     raise Exception(
-                                                                        'Image height needs to be constant for the whole {}'
-                                                                        'layers. It was {} before and is {} in the current '
-                                                                        'layers'.format(self._name_of_highmag_layer,
-                                                                                        self.img_height, height))
+                                                                        'Image height needs to be constant for the '
+                                                                        'whole {} layers. It was {} before and is {} '
+                                                                        'in the current layers'.format(
+                                                                            self._name_of_highmag_layer,
+                                                                            self.img_height, height))
                                                             if scanres_info.tag.endswith('width'):
                                                                 width = int(scanres_info.text)
                                                                 if self.img_width == width or self.img_width == 0:
                                                                     self.img_width = width
                                                                 else:
                                                                     raise Exception(
-                                                                        'Image width needs to be constant for the whole {} '
-                                                                        'layers. It was {} before and is {} in the current '
-                                                                        'layers'.format(self._name_of_highmag_layer,
-                                                                                        self.img_width, width))
+                                                                        'Image width needs to be constant for the '
+                                                                        'whole {} layers. It was {} before and is {} '
+                                                                        'in the current layers'.format(
+                                                                            self._name_of_highmag_layer,
+                                                                            self.img_width, width))
 
                                                     if layer_content.tag.endswith('pixelSize'):
                                                         pixel_size = float(layer_content.attrib['Value'])
-                                                        if self.pixel_size == pixel_size or self.pixel_size ==0:
+                                                        if self.pixel_size == pixel_size or self.pixel_size == 0:
                                                             self.pixel_size = pixel_size
                                                         else:
-                                                            raise Exception('Pixel size needs to be constant for the whole '
-                                                                            '{} layers. It was {} before and is {} in the '
-                                                                            'current layers'.format(
-                                                                self._name_of_highmag_layer, self.pixel_size, pixel_size))
+                                                            raise Exception('Pixel size needs to be constant for the '
+                                                                            'whole {} layers. It was {} before and is '
+                                                                            '{} in the current layers'.format(
+                                                                                self._name_of_highmag_layer,
+                                                                                self.pixel_size, pixel_size))
 
                                                     if layer_content.tag.endswith('StagePosition'):
                                                         for positon_info in layer_content:
-                                                            if positon_info.tag == '{http://schemas.datacontract.org/2004/07/Fei.Applications.SAL}x':
+                                                            if positon_info.tag == '{http://schemas.datacontract.org/' \
+                                                                                   '2004/07/Fei.Applications.SAL}x':
                                                                 # noinspection PyUnboundLocalVariable
                                                                 self.layers[metadata_location][
                                                                     'StagePosition_center_x'] = float(positon_info.text)
-                                                            elif positon_info.tag == '{http://schemas.datacontract.org/2004/07/Fei.Applications.SAL}y':
+                                                            elif positon_info.tag == '{http://schemas.datacontract' \
+                                                                                     '.org/2004/07/Fei.Applications' \
+                                                                                     '.SAL}y':
                                                                 # noinspection PyUnboundLocalVariable
                                                                 self.layers[metadata_location][
                                                                     'StagePosition_center_y'] = float(positon_info.text)
@@ -307,6 +313,16 @@ class MapsXmlParser:
                                                 sys.exit(-1)
 
     def extract_annotation_locations(self):
+        """Extract annotation metadata from the XML file
+
+
+        Goes through all the LayerGroups and looks at any layer in any LayerGroup that is an Annotation Layer. Get all
+        x & y positions of the annotations & the annotation name and save them in the annotations dictionary.
+        The keys are the names of the annotations (MAPS enforces uniqueness), its values are a dictionary containing the
+        StagePosition_x & StagePosition_y positions of the annotation (in m => global coordinate system for the
+        experiment)
+
+        """
         # Get all x & y positions of the annotations & the annotation name and save them in a dictionary.
         # Keys are the annotation names, values are a dictionary of x & y positions of that annotation
         for child in self._xml_file:
@@ -324,10 +340,12 @@ class MapsXmlParser:
                                     for annotation_content in gggc:
                                         if annotation_content.tag.endswith('StagePosition'):
                                             for a in annotation_content:
-                                                if a.tag == '{http://schemas.datacontract.org/2004/07/Fei.Applications.SAL}x':
+                                                if a.tag == '{http://schemas.datacontract.org/' \
+                                                            '2004/07/Fei.Applications.SAL}x':
                                                     # noinspection PyUnboundLocalVariable
                                                     self.annotations[annotation_name]['StagePosition_x'] = float(a.text)
-                                                elif a.tag == '{http://schemas.datacontract.org/2004/07/Fei.Applications.SAL}y':
+                                                elif a.tag == '{http://schemas.datacontract.org/' \
+                                                              '2004/07/Fei.Applications.SAL}y':
                                                     # noinspection PyUnboundLocalVariable
                                                     self.annotations[annotation_name]['StagePosition_y'] = float(a.text)
                                 except NameError:
@@ -335,7 +353,16 @@ class MapsXmlParser:
                                     sys.exit(-1)
 
     def get_relative_tile_locations(self):
-        # read in all the metadata files for the different layers to get tile positions
+        """Read in all the metadata files for the different layers to get the relative tile positions
+
+        Each layer has its own metadata XML file that contains the relative positions of all the tiles in the layer.
+        This function goes through all of them, extracts the information and saves it to the tiles dictionary.
+        The keys are the combined layer name & filename of the tile and the values are a dictionary again. Each tile
+        contains the information about what layer it belongs to (layer, key to the layer dict), the path to the image as
+        a Path variable (img_path), its filename, the name of the layer (layer_name) and its relative position x & y
+        within that layer (RelativeTilePosition_x & RelativeTilePosition_y)
+
+        """
         metadata_filename = 'StitchingData.xml'
         for metadata_location in self.layers:
             tile_image_folder_path = ''
@@ -372,21 +399,28 @@ class MapsXmlParser:
                                                                     self._position_to_extract):
                                                                 for position in positioning_detail:
 
-                                                                    if position.tag == '{http://schemas.datacontract.org/2004/07/System.Drawing}x':
+                                                                    if position.tag == '{http://schemas.datacontract.' \
+                                                                                       'org/2004/07/System.Drawing}x':
                                                                         # noinspection PyUnboundLocalVariable
                                                                         self.tiles[tile_name][
                                                                             'RelativeTilePosition_x'] = float(
                                                                             position.text)
-                                                                    elif position.tag == '{http://schemas.datacontract.org/2004/07/System.Drawing}y':
+                                                                    elif position.tag == '{http://schemas.' \
+                                                                                         'datacontract.org/2004/07/' \
+                                                                                         'System.Drawing}y':
                                                                         # noinspection PyUnboundLocalVariable
                                                                         self.tiles[tile_name][
                                                                             'RelativeTilePosition_y'] = float(
                                                                             position.text)
 
     def calculate_absolute_tile_coordinates(self):
-        # Create absolute positions from the relative Tile positions
-        # Calculate the edge Stage position of the square based on the parameters extracted
+        """Calculate the absolute stage positions of all tiles based on their relative positions
 
+        Calculate the absolute stage position of the center of each tile based on the relative tile positions, the
+        rotation of the layer and the absolute stage position of the center of the layer. The resulting position is
+        saved to the _tile_center_stage_positions and the corresponding tile name to the _tile_names list.
+
+        """
         for current_layer_key in self.layers:
             current_layer = self.layers[current_layer_key]
 
@@ -413,27 +447,39 @@ class MapsXmlParser:
                 current_tile = self.tiles[current_tile_name]
                 if current_tile['layers'] == current_layer_key:
                     relative_x_stepsize = np.array([self.pixel_size * math.cos(current_layer['rotation']
-                                                                                            / 180 * math.pi),
-                                                    self.pixel_size * math.sin(
-                                                        current_layer['rotation'] / 180 * math.pi)])
+                                                                               / 180 * math.pi),
+                                                    self.pixel_size * math.sin(current_layer['rotation']
+                                                                               / 180 * math.pi)])
                     relative_y_stepsize = np.array([self.pixel_size * math.sin(current_layer['rotation']
-                                                                                            / 180 * math.pi),
-                                                    self.pixel_size * math.cos(
-                                                        current_layer['rotation'] / 180 * math.pi)])
+                                                                               / 180 * math.pi),
+                                                    self.pixel_size * math.cos(current_layer['rotation']
+                                                                               / 180 * math.pi)])
 
                     # absolute_tile_pos is the position of the corner of the tile in absolute Stage Position
                     # coordinates, the tile_center_stage_position are the Stage Position coordinates of the tile
                     absolute_tile_pos = relative_0 + current_tile['RelativeTilePosition_x'] * relative_x_stepsize + \
-                                        current_tile[
-                                            'RelativeTilePosition_y'] * relative_y_stepsize
+                        current_tile['RelativeTilePosition_y'] * relative_y_stepsize
                     tile_center_stage_position = absolute_tile_pos + self.img_width / 2 * relative_x_stepsize + \
-                                                 self.img_height / 2 * relative_y_stepsize
+                        self.img_height / 2 * relative_y_stepsize
 
                     self._tile_center_stage_positions.append(tile_center_stage_position)
                     self._tile_names.append([current_layer['layer_name'], current_tile_name])
 
     # noinspection PyTypeChecker
     def find_annotation_tile(self):
+        """Find the image tile in which each annotation is
+
+        Based on the absolute stage position of the annotations and the calculated stage positions of the center of the
+        tiles, this function calculates the tiles within which all annotation are and saves this information to the
+        annotation_tiles dictionary. The keys are the names of the annotation. The values are the key to the
+        corresponding layer in the layer dict (layer), the path to the image as a Path variable (img_path), its
+        filename, the name of the layer (layer_name) and the relative position x & y of the tile within that layer
+        (RelativeTilePosition_x & RelativeTilePosition_y), the absolute stage position of the annotation
+        (Annotation_StagePosition_x and Annotation_StagePosition_y), the position of the annotation within the tile
+        image (in pixels, Annotation_img_position_x & Annotation_img_position_y).
+        The surrounding_tile_names and surrounding_tile_exists are added in determine_surrounding_tiles
+
+        """
         # Give annotation_name, layers metadata key, layer_name, tile_name,
         # stage coordinates & pixel position in the image
 
@@ -442,25 +488,24 @@ class MapsXmlParser:
         # If the distance is larger than the diagonal distance to the edge, the annotation is not inside of any tile
         # and thus shouldn't be exported
         distance_threshold = np.square(self.img_height / 2 * self.pixel_size) + \
-                             np.square(self.img_width / 2 * self.pixel_size)
+            np.square(self.img_width / 2 * self.pixel_size)
 
         for annotation_name in self.annotations:
             a_coordinates = np.array([self.annotations[annotation_name]['StagePosition_x'],
                                       self.annotations[annotation_name]['StagePosition_y']])
             distance_map = np.square(np.array(self._tile_center_stage_positions) - a_coordinates)
-            quandratic_distance = distance_map[:, 0] + distance_map[:, 1]
-            tile_index = np.argmin(quandratic_distance)
+            quadratic_distance = distance_map[:, 0] + distance_map[:, 1]
+            tile_index = np.argmin(quadratic_distance)
             current_tile = self.tiles[self._tile_names[tile_index][1]]
 
-            if quandratic_distance[tile_index] < distance_threshold:
+            if quadratic_distance[tile_index] < distance_threshold:
                 self.annotation_tiles[annotation_name] = current_tile
                 self.annotation_tiles[annotation_name]['Annotation_StagePosition_x'] = \
-                                                        self.annotations[annotation_name]['StagePosition_x']
+                    self.annotations[annotation_name]['StagePosition_x']
                 self.annotation_tiles[annotation_name]['Annotation_StagePosition_y'] = \
-                                                        self.annotations[annotation_name]['StagePosition_y']
+                    self.annotations[annotation_name]['StagePosition_y']
                 # Calculate the position of the fork within the image
                 distance_to_center = (np.array(self._tile_center_stage_positions[tile_index]) - a_coordinates)
-
 
                 # Calculation of annotation position is complicated, because of image rotation.
                 rotation = self.layers[self.annotation_tiles[annotation_name]['layers']]['rotation']
@@ -486,8 +531,7 @@ class MapsXmlParser:
                     logging.warning('Formula for the calculation of the annotation position within the image '
                                     'does not work for these parameters, a rotation of {} leads to divison by 0. The '
                                     'annotation marker is placed in the middle of the image because the location '
-                                    'could not be calculated'
-                          .format(rotation))
+                                    'could not be calculated'.format(rotation))
                     x_shift = 0
                     y_shift = 0
 
@@ -498,10 +542,16 @@ class MapsXmlParser:
 
             else:
                 logging.warning('Annotation {} is not within any of the tiles and will be ignored'.
-                      format(annotation_name))
+                                format(annotation_name))
 
+    def determine_surrounding_tiles(self):
+        """Checks whether each annotation tile has surrounding tiles to be stitched with it
 
-    def determine_surrounding_sites(self):
+        For each annotation tile, it checks whether the surrounding tiles in a given stitch_radius exist. It saves a
+        boolean list of their existence (including its own existence) to surrounding_tile_exists and the a list of names
+        of the surrounding filenames to surrounding_tile_names of the annotation_tiles dictionary
+
+        """
         # Take in the center tile and determine the names & existence of stitch_radius tiles around it.
         # In default stitch-radius = 1, it searches for the 8 tiles surrounding the center tile
         for annotation_name in self.annotation_tiles:
@@ -525,23 +575,3 @@ class MapsXmlParser:
                         self.annotation_tiles[annotation_name]['surrounding_tile_exists'].append(True)
                     else:
                         self.annotation_tiles[annotation_name]['surrounding_tile_exists'].append(False)
-
-
-def main():
-    pass
-    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/8330_siNeg_CPT_3rd/'
-    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_CPT_3rd_2ul/'
-    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/siXRCC3_HU_1st_y1/'
-    #
-    # highmag_layer = 'highmag'
-    # parser = MapsXmlParser(project_folder=project_folder_path, position_to_use=0,
-    #                          name_of_highmag_layer=highmag_layer, stitch_radius=1)
-
-
-if __name__ == "__main__":
-    main()
-
-# Change to using findall() with full tags instead of matching end of tags
-# for type_tag in root.findall('bar/type'):
-#     value = type_tag.get('foobar')
-#     print(value)
