@@ -117,18 +117,11 @@ class MapsXmlParser:
         """Run function for the class
 
         parse_xml calls all the necessary functions of the class in the correct order to parse the XML file. Call this
-        function after initializing a class object, then access the results via the annotation_tiles variable
+        function after initializing a class object, then access the results via the annotation_tiles variable that
+        contains the relevant output of the XML parsing
 
         Returns:
-            annotation_tiles (dict): Contains the relevant output of the XML parsing. The keys are the names of the
-                annotation. The values are the key to the corresponding layers in the layers dict (layers), the path to
-                the image as a Path variable (img_path), its filename, the name of the layers (layer_name) and the
-                relative position x & y of the tile within that layers (RelativeTilePosition_x &
-                RelativeTilePosition_y), the absolute stage position of the annotation (Annotation_StagePosition_x and
-                Annotation_StagePosition_y), the position of the annotation within the tile image (in pixels,
-                Annotation_img_position_x & Annotation_img_position_y), a list of the surrounding tile names
-                (surrounding_tile_names) and a list of booleans of whether each of the surrounding tiles exist,
-                including the tile itself (surrounding_tile_exists)
+            dict: annotation_tiles
 
         """
         self.extract_layer_metadata()
@@ -195,10 +188,8 @@ class MapsXmlParser:
         the whole layers (its width in meters, totalHfw) and the name of the layers (layer_name).
         In a calculate_absolute_tile_coordinates, StagePosition_corner_x and StagePosition_corner_y are calculated and
         added to the layers dictionary.
-
-        Note:
-            The parsing is quite ugly with all the if statements, because the tags have huge names and it's easier just
-            to check for what the tags end in.
+        The parsing is quite ugly with all the if statements, because the tags have huge names and it's easier just
+        to check for what the tags end in.
 
         """
         # Extract the information about all the layers (high magnification acquisition layers)

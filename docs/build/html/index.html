@@ -1,0 +1,407 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Welcome to MAPS XML Parser’s documentation! &#8212; MAPS XML Parser 0.1.0 documentation</title>
+    <link rel="stylesheet" href="_static/pyramid.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head><body>
+
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">MAPS XML Parser 0.1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-sites_of_interest_parser">
+<span id="welcome-to-maps-xml-parser-s-documentation"></span><h1>Welcome to MAPS XML Parser’s documentation!<a class="headerlink" href="#module-sites_of_interest_parser" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="sites_of_interest_parser.MapsXmlParser">
+<em class="property">class </em><code class="descclassname">sites_of_interest_parser.</code><code class="descname">MapsXmlParser</code><span class="sig-paren">(</span><em>project_folder: str</em>, <em>name_of_highmag_layer: str = 'highmag'</em>, <em>use_unregistered_pos: bool = True</em>, <em>stitch_radius: int = 1</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser" title="Permalink to this definition">¶</a></dt>
+<dd><p>XML Parser class that processes MAPS XMLs and reveals the image tiles belonging to each annotation</p>
+<p>This class takes XML files from the Thermo MAPS Application, extracts the location of all its annotations and
+compares it to the location of all the image tiles. This gets a bit more complicated, because tiles only have a
+relative position in pixels within their layers and those layers are (potentially) turned at arbitrary angles
+relative to the global coordinate system (which is in meters).
+It is important that the functions are run in the correct order to extract &amp; process this information. Therefore,
+use it by initializing the class and the calling parser.parse_xml().</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project_folder</strong> (<em>str</em>) – The path to the project folder of the MAPS project, containing the XML file, as a string</p></li>
+<li><p><strong>name_of_highmag_layer</strong> (<em>str</em>) – Name of the image layer in MAPS for which tiles containing annotations should
+be found. Defaults to ‘highmag’</p></li>
+<li><p><strong>use_unregistered_pos</strong> (<em>bool</em>) – Whether to use the unregistered position of the tiles (where MAPS thinks it
+acquired them =&gt; True, default) or a calculated position (e.g. through stitching in MAPS) should be used for
+the tiles (False)</p></li>
+<li><p><strong>stitch_radius</strong> (<em>int</em>) – The number of images in each direction from the tile containing the annotation should be
+stitched. Parser doesn’t do the stitching, just extracts relevant information about neighboring tiles.
+Defaults to 1 =&gt; 3x3 images would be stitched.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="sites_of_interest_parser.MapsXmlParser.project_folder_path">
+<code class="descname">project_folder_path</code><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.project_folder_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>The path to the project folder of the MAPS project, containing the XML file, as a
+string</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sites_of_interest_parser.MapsXmlParser.layers">
+<code class="descname">layers</code><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.layers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains information about the layers (squares/acquisitions). The keys are local paths to
+the metadata about the layer and the values are dictionaries again. Each layer contains the information
+about the stage position of the center of the layer (in meters, StagePosition_center_x &amp;
+StagePosition_center_y), about the rotation of the layer relative to the global stage positions (in degrees,
+rotation), the number of columns of tiles (images) in the layer (columns), the vertical &amp; horizontal overlap
+between the tiles (overlapVertical, overlapHorizontal), the number of rows of tiles (images) in the layer
+(rows), the horizontal field width of each tile (its width in meters, tileHfw), the horizontal field width
+of the whole layer (its width in meters, totalHfw), the name of the layer (layer_name), the vertical field
+width of each tile (its width in meters, tileVfw), and the global stage position of the corner of the layer
+(in meters, StagePosition_corner_x &amp; StagePosition_corner_y)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sites_of_interest_parser.MapsXmlParser.tiles">
+<code class="descname">tiles</code><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.tiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains information about individual tiles. The keys are the combined layer name &amp; filename of
+the tile and the values are a dictionary again. Each tile contains the information about what layer it
+belongs to (layer, key to the layer dict), the path to the image as a Path variable (img_path), its
+filename, the name of the layer (layer_name) and its relative position x &amp; y within that layer
+(RelativeTilePosition_x &amp; RelativeTilePosition_y)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sites_of_interest_parser.MapsXmlParser.annotations">
+<code class="descname">annotations</code><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.annotations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains the information about all the annotations. The keys are the names of the
+annotations (MAPS enforces uniqueness), its values are a dictionary containing the StagePosition_x &amp;
+StagePosition_y positions of the annotation (in m =&gt; global coordinate system for the experiment)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sites_of_interest_parser.MapsXmlParser.annotation_tiles">
+<code class="descname">annotation_tiles</code><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.annotation_tiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains the relevant output of the XML parsing. The keys are the names of the
+annotation. The values are the key to the corresponding layer in the layer dict (layer), the path to the
+image as a Path variable (img_path), its filename, the name of the layer (layer_name) and the relative
+position x &amp; y of the tile within that layer (RelativeTilePosition_x &amp; RelativeTilePosition_y), the
+absolute stage position of the annotation (Annotation_StagePosition_x and Annotation_StagePosition_y), the
+position of the annotation within the tile image (in pixels, Annotation_img_position_x &amp;
+Annotation_img_position_y), a list of the surrounding tile names (surrounding_tile_names) and a list of
+booleans of whether each of the surrounding tiles exist, including the tile itself (surrounding_tile_exists)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sites_of_interest_parser.MapsXmlParser.stitch_radius">
+<code class="descname">stitch_radius</code><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.stitch_radius" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of images in each direction from the tile containing the annotation should be
+stitched.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sites_of_interest_parser.MapsXmlParser.pixel_size">
+<code class="descname">pixel_size</code><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.pixel_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>The pixel size of the acquisition in the name_of_highmag_layer [in meters]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sites_of_interest_parser.MapsXmlParser.img_height">
+<code class="descname">img_height</code><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.img_height" title="Permalink to this definition">¶</a></dt>
+<dd><p>The height of the highmag image in pixels</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="sites_of_interest_parser.MapsXmlParser.img_width">
+<code class="descname">img_width</code><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.img_width" title="Permalink to this definition">¶</a></dt>
+<dd><p>The width of the highmag image in pixels</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="sites_of_interest_parser.MapsXmlParser.calculate_absolute_tile_coordinates">
+<code class="descname">calculate_absolute_tile_coordinates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.calculate_absolute_tile_coordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the absolute stage positions of all tiles based on their relative positions</p>
+<p>Calculate the absolute stage position of the center of each tile based on the relative tile positions, the
+rotation of the layer and the absolute stage position of the center of the layer. The resulting position is
+saved to the _tile_center_stage_positions and the corresponding tile name to the _tile_names list.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sites_of_interest_parser.MapsXmlParser.convert_img_path_to_local_path">
+<code class="descname">convert_img_path_to_local_path</code><span class="sig-paren">(</span><em>img_path</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.convert_img_path_to_local_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a local path of the microscope computer to a path of the image in the project folder</p>
+<p>MAPS saves the image paths of the local storage of the image files. In our setup, this path starts with
+‘D:ProjectName’, even though the files aren’t actually on the D drive anymore but were copied to a share, into
+the project_folder_path. This function strips ‘D:ProjectName’ away from the path and returns a Path object for
+the location of the images on the share.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>img_path</strong> (<em>str</em>) – Original path to the images on the microscope computer, starting with ‘D:ProjectName’</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Path object of the corrected path on the share</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="sites_of_interest_parser.MapsXmlParser.convert_windows_pathstring_to_path_object">
+<em class="property">static </em><code class="descname">convert_windows_pathstring_to_path_object</code><span class="sig-paren">(</span><em>string_path</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.convert_windows_pathstring_to_path_object" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a windows path string to a path object</p>
+<p>Some paths are provided in the XML file and the metadata as Windows paths. This function creates pathlib Path
+objects out of them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>string_path</strong> (<em>str</em>) – String of a Windows path containing double backslashes</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Path object of the string_path</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="sites_of_interest_parser.MapsXmlParser.determine_surrounding_tiles">
+<code class="descname">determine_surrounding_tiles</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.determine_surrounding_tiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks whether each annotation tile has surrounding tiles to be stitched with it</p>
+<p>For each annotation tile, it checks whether the surrounding tiles in a given stitch_radius exist. It saves a
+boolean list of their existence (including its own existence) to surrounding_tile_exists and the a list of names
+of the surrounding filenames to surrounding_tile_names of the annotation_tiles dictionary</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sites_of_interest_parser.MapsXmlParser.extract_annotation_locations">
+<code class="descname">extract_annotation_locations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.extract_annotation_locations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract annotation metadata from the XML file</p>
+<p>Goes through all the LayerGroups and looks at any layer in any LayerGroup that is an Annotation Layer. Get all
+x &amp; y positions of the annotations &amp; the annotation name and save them in the annotations dictionary.
+The keys are the names of the annotations (MAPS enforces uniqueness), its values are a dictionary containing the
+StagePosition_x &amp; StagePosition_y positions of the annotation (in m =&gt; global coordinate system for the
+experiment)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sites_of_interest_parser.MapsXmlParser.extract_layer_metadata">
+<code class="descname">extract_layer_metadata</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.extract_layer_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the information about all the layers in the high magnification acquisition layers</p>
+<p>Go through the XML file and look at the _name_of_highmag_layer layers group. Within that layers group, get only
+the layers (acquisitions/squares) that contain microscope images (TileLayer), not any annotation layers or
+others. Save them to the self.layers dictionary in the following way: The keys are local paths to
+the metadata about the layers and the values are dictionaries again. Each layers contains the information
+about the stage position of the center of the layers (in meters, StagePosition_center_x &amp;
+StagePosition_center_y), about the rotation of the layers relative to the global stage positions (in degrees,
+rotation), the number of columns of tiles (images) in the layers (columns), the vertical &amp; horizontal overlap
+between the tiles (overlapVertical, overlapHorizontal), the number of rows of tiles (images) in the layers
+(rows), the horizontal field width of each tile (its width in meters, tileHfw), the horizontal field width of
+the whole layers (its width in meters, totalHfw) and the name of the layers (layer_name).
+In a calculate_absolute_tile_coordinates, StagePosition_corner_x and StagePosition_corner_y are calculated and
+added to the layers dictionary.
+The parsing is quite ugly with all the if statements, because the tags have huge names and it’s easier just
+to check for what the tags end in.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sites_of_interest_parser.MapsXmlParser.find_annotation_tile">
+<code class="descname">find_annotation_tile</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.find_annotation_tile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the image tile in which each annotation is</p>
+<p>Based on the absolute stage position of the annotations and the calculated stage positions of the center of the
+tiles, this function calculates the tiles within which all annotation are and saves this information to the
+annotation_tiles dictionary. The keys are the names of the annotation. The values are the key to the
+corresponding layer in the layer dict (layer), the path to the image as a Path variable (img_path), its
+filename, the name of the layer (layer_name) and the relative position x &amp; y of the tile within that layer
+(RelativeTilePosition_x &amp; RelativeTilePosition_y), the absolute stage position of the annotation
+(Annotation_StagePosition_x and Annotation_StagePosition_y), the position of the annotation within the tile
+image (in pixels, Annotation_img_position_x &amp; Annotation_img_position_y).
+The surrounding_tile_names and surrounding_tile_exists are added in determine_surrounding_tiles</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sites_of_interest_parser.MapsXmlParser.get_relative_tile_locations">
+<code class="descname">get_relative_tile_locations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.get_relative_tile_locations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in all the metadata files for the different layers to get the relative tile positions</p>
+<p>Each layer has its own metadata XML file that contains the relative positions of all the tiles in the layer.
+This function goes through all of them, extracts the information and saves it to the tiles dictionary.
+The keys are the combined layer name &amp; filename of the tile and the values are a dictionary again. Each tile
+contains the information about what layer it belongs to (layer, key to the layer dict), the path to the image as
+a Path variable (img_path), its filename, the name of the layer (layer_name) and its relative position x &amp; y
+within that layer (RelativeTilePosition_x &amp; RelativeTilePosition_y)</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="sites_of_interest_parser.MapsXmlParser.load_xml">
+<em class="property">static </em><code class="descname">load_xml</code><span class="sig-paren">(</span><em>xml_file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.load_xml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads and returns the MAPS XML File</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>xml_file_path</strong> (<em>Path</em>) – Path to the XML file as a pathlib path</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The root of the XML file parsed with xml.etree.ElementTree</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>root</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="sites_of_interest_parser.MapsXmlParser.parse_xml">
+<code class="descname">parse_xml</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.parse_xml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run function for the class</p>
+<p>parse_xml calls all the necessary functions of the class in the correct order to parse the XML file. Call this
+function after initializing a class object, then access the results via the annotation_tiles variable that
+contains the relevant output of the XML parsing</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>annotation_tiles</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<div class="toctree-wrapper compound">
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to MAPS XML Parser’s documentation!</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">MAPS XML Parser 0.1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2019, Joel Luethi.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>
