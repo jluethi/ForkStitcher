@@ -11,7 +11,6 @@ import imagej
 
 from sites_of_interest_parser import MapsXmlParser
 
-
 def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size: float, stitch_radius: int = 1,
                            eight_bit: bool = False):
     # This function takes the parser object containing all the information about the MAPS project and its annotations.
@@ -26,11 +25,11 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
     # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10')
 
     # Maven initialization with stitching plugin wrappers
-    ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
+    # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
 
     # Local imageJ initialization
-    # ij = imagej.init('/Applications/Fiji.app')
-    from jnius import autoclass
+    ij = imagej.init('/Applications/Fiji.app')
+    # ij = imagej.init('C:\\Program Files\\Fiji')
     for annotation_name in annotation_tiles:
         number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
         # If the image files for the 8 neighbors and the tile exist, stitch the images
@@ -47,24 +46,27 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             # # BF = autoclass('ij.BioFormats')
             # # img = BF.open(str(img_path / center_filename))
             #
+            # from jnius import autoclass
             # ImagePlusClass = autoclass('ij.ImagePlus')
-            # imagej2_img = ij.io().open(str(img_path / center_filename))
-            # imps = [ij.convert().convert(imagej2_img, ImagePlusClass)]
+            # # imagej2_img = ij.io().open(str(img_path / center_filename))
+            # # imps = [ij.convert().convert(imagej2_img, ImagePlusClass)]
+            # imps = []
             #
             # for neighbor in annotation_tiles[annotation_name]['surrounding_tile_names']:
             #     print(neighbor)
             #     imagej2_img = ij.io().open(str(img_path / neighbor))
             #     imps.append(ij.convert().convert(imagej2_img, ImagePlusClass))
-            # print(type(imps))
-            # print(imps)
             # # Define starting positions
-            # positions = [[3686, 3686], [0, 0], [3686, 0], [7373, 0], [0, 3686], [7373, 3686], [0, 7373],
-            #              [3686, 7373], [7373, 7373]]
+            # positions = ij.py.to_java([[0, 0], [3686, 0], [7373, 0], [0, 3686], [3686, 3686], [7373, 3686], [0, 7373],
+            #              [3686, 7373], [7373, 7373]])
+            # java_imgs = ij.py.to_java(imps)
             #
+            # # dimensionality = ij.py.to_java(2)
+            # # computeOverlap = ij.py.to_java(True)
             # dimensionality = 2
             # computeOverlap = True
             # StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
-            # models = StitchingUtils.computeStitching(imps, positions, dimensionality, computeOverlap)
+            # models = StitchingUtils.computeStitching(java_imgs, positions, dimensionality, computeOverlap)
             #
             # resultImp = StitchingUtils.fuseTiles(imps, models, dimensionality)
             #
@@ -130,8 +132,6 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
 
             # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with changed
             #  parameters or by putting the individual images in a folder so that they could be stitched manually)
-
-            # TODO: Add an arrow to the image
 
         else:
             # TODO: Potentially implement stitching for edge-cases of non 3x3 tiles
@@ -204,6 +204,7 @@ def save_annotation_info_to_csv(annotation_tiles, csv_path):
 
 def main():
     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
+    # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
     project_name = '8330_siNeg_CPT_3rd'
     # project_name = '8330_siXRCC3_CPT_3rd_2ul'
     # project_name = '8373_3_siXRCC3_HU_1st_y1'
@@ -228,9 +229,9 @@ def main():
     print(annotation_tiles)
     csv_path = '/Users/Joel/Desktop/' + project_name + '.csv'
 
-    # annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles, output_path=output_path,
-    #                                           pixel_size = parser.pixel_size, stitch_radius=stitch_radius,
-    #                                           eight_bit=True)
+    annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles, output_path=output_path,
+                                              pixel_size=parser.pixel_size, stitch_radius=stitch_radius,
+                                              eight_bit=True)
 
     # save_annotation_info_to_csv(parser.annotation_tiles, csv_path)
     # save_annotation_info_to_csv(annotation_tiles, csv_path)
