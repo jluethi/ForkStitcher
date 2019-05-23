@@ -11,6 +11,17 @@ import imagej
 
 from sites_of_interest_parser import MapsXmlParser
 
+# Headers of the
+base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missing Link Fork',
+               'fork symetric', 'fork asymetric', 'reversed fork symetric', 'reversed fork asymetric',
+               'size reversed fork (nm)', 'dsDNA RF', 'internal ssDNA RF', 'ssDNA end RF',
+               'total ssDNA RF	gaps',
+               'gaps', 'sister	gaps', 'parental', 'size gaps (nm)', 'junction ssDNA size (nm)',
+               'hemicatenane', 'termination intermediate', 'bubble', 'hemireplicated bubble',
+               'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
+               'list for ssDNA at junction (nt)']
+
+
 def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size: float, stitch_radius: int = 1,
                            eight_bit: bool = False):
     # This function takes the parser object containing all the information about the MAPS project and its annotations.
@@ -47,15 +58,13 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             # # img = BF.open(str(img_path / center_filename))
             #
             # from jnius import autoclass
-            # ImagePlusClass = autoclass('ij.ImagePlus')
-            # # imagej2_img = ij.io().open(str(img_path / center_filename))
-            # # imps = [ij.convert().convert(imagej2_img, ImagePlusClass)]
+            # image_plus_class = autoclass('ij.ImagePlus')
             # imps = []
             #
             # for neighbor in annotation_tiles[annotation_name]['surrounding_tile_names']:
             #     print(neighbor)
             #     imagej2_img = ij.io().open(str(img_path / neighbor))
-            #     imps.append(ij.convert().convert(imagej2_img, ImagePlusClass))
+            #     imps.append(ij.convert().convert(imagej2_img, image_plus_class))
             # # Define starting positions
             # positions = ij.py.to_java([[0, 0], [3686, 0], [7373, 0], [0, 3686], [3686, 3686], [7373, 3686], [0, 7373],
             #              [3686, 7373], [7373, 7373]])
@@ -112,6 +121,7 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
 
             output_filename = annotation_name + '.png'
             ij.io().save(stitched_img_dataset, str(output_path / output_filename))
+            ij.window().clear()
 
             # Get the information about how much the center image has been shifted, where the fork is placed in
             # the stitched image
@@ -119,23 +129,21 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             with open(config_path_registered, 'r') as f:
                 stitching_config = f.read()
 
-            original_annotation_coord = [annotation_tiles[annotation_name]['Annotation_img_position_x'],
-                                         annotation_tiles[annotation_name]['Annotation_img_position_y']]
+            original_annotation_coord = [annotation_tiles[annotation_name]['Annotation_tile_img_position_x'],
+                                         annotation_tiles[annotation_name]['Annotation_tile_img_position_y']]
             stitched_annotation_coordinates = check_stitching_result(stitching_config, original_annotation_coord)
 
             # Add the information about where the fork is in the stitched image back to the dictionary, such that it
             # can be saved to csv afterwards
-            annotation_tiles[annotation_name]['Stitched_annotation_img_position_x'] = \
-                stitched_annotation_coordinates[0]
-            annotation_tiles[annotation_name]['Stitched_annotation_img_position_y'] = \
-                stitched_annotation_coordinates[1]
+            annotation_tiles[annotation_name]['annotation_position_x'] = stitched_annotation_coordinates[0]
+            annotation_tiles[annotation_name]['annotation_position_y'] = stitched_annotation_coordinates[1]
 
             # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with changed
             #  parameters or by putting the individual images in a folder so that they could be stitched manually)
 
         else:
             # TODO: Potentially implement stitching for edge-cases of non 3x3 tiles
-            logging.warning('Not stitching fork {} at the moment, because it is not surrounded by other tiles'.format(
+            logging.warning('Not stitching fork {}, because it is not surrounded by other tiles'.format(
                     annotation_name))
 
     # return the annotation_tiles dictionary that now contains the information about whether a fork was stitched and
@@ -160,46 +168,7 @@ def check_stitching_result(stitching_config, annotation_coordinates):
     return stitched_annotation_coordinates.astype(int)
 
 
-def save_annotation_info_to_csv(annotation_tiles, csv_path):
-    # Saves the annotation_tiles information to a csv file, so that the fork position could be used in
-    # quality control and so that users assign whether an annotation was a fork or a false positive.
-    # Needs to have the information about fork location both in MAPS (global coordinates) and in the stitched image
-    # (img coordinates)
 
-    # From self.annotation_tiles: img_path, filename, layer_name, stage coordinates, pixel coordinates in the raw
-    # image and pixel coordinates in the stitched image (need to figure out how to get the pixel coordinates in the
-    # stitched image)
-    base_header = ['Image', 'False Positive', 'Loop', 'Crossing', 'fork symetric', 'fork asymetric',
-                                   'reversed fork symetric', 'reversed fork asymetric',	'size reversed fork (nm)',
-                                   'dsDNA RF', 'internal ssDNA RF', 'ssDNA end RF', 'total ssDNA RF	gaps',
-                                   'gaps', 'sister	gaps', 'parental', 'size gaps (nm)', 'junction ssDNA size (nm)',
-                                   'hemicatenane', 'termination intermediate', 'bubble', 'hemireplicated bubble',
-                                   'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
-                                   'list for ssDNA at junction (nt)']
-    header_addition = list(list(annotation_tiles.values())[0].keys())
-    header_addition.remove('surrounding_tile_exists')
-    header_addition.remove('surrounding_tile_names')
-    csv_header = pd.DataFrame(columns=base_header + header_addition)
-    csv_header.to_csv(csv_path, index=False)
-
-    for annotation_name in annotation_tiles:
-        current_annotation = {}
-        current_annotation['Image'] = annotation_name
-        for header in base_header[1:]:
-            current_annotation[header] = ''
-
-        for info_key in annotation_tiles[annotation_name]:
-            current_annotation[info_key] = annotation_tiles[annotation_name][info_key]
-
-        if 'surrounding_tile_exists' in current_annotation:
-            del current_annotation['surrounding_tile_exists']
-
-        if 'surrounding_tile_names' in current_annotation:
-            del current_annotation['surrounding_tile_names']
-
-        current_annotation_pd = pd.DataFrame(current_annotation, index=[0])
-        with open(csv_path, 'a') as f:
-            current_annotation_pd.to_csv(f, header=False, index=False)
 
 
 def main():
@@ -209,7 +178,7 @@ def main():
     # project_name = '8330_siXRCC3_CPT_3rd_2ul'
     # project_name = '8373_3_siXRCC3_HU_1st_y1'
     project_folder_path = os.path.join(base_path + project_name)
-    logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '.log'), level=logging.INFO,
+    logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '_2.log'), level=logging.INFO,
                         format='%(asctime)s %(message)s')
     logging.info('Processing experiment {}'.format(project_name))
     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects//'
@@ -222,19 +191,31 @@ def main():
     os.makedirs(str(output_path), exist_ok=True)
 
     highmag_layer = 'highmag'
+
+    # csv_path = os.path.join(base_path, project_name + '_annotations' + '.csv')
+    csv_path = '/Users/Joel/Desktop/test_annotations.csv'
+
     parser = MapsXmlParser(project_folder=project_folder_path, use_unregistered_pos=True,
                            name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
     annotation_tiles = parser.parse_xml()
-    # print(parser.annotation_tiles['fork74'])
-    print(annotation_tiles)
-    csv_path = '/Users/Joel/Desktop/' + project_name + '.csv'
+    parser.save_annotation_tiles_to_csv(base_header, csv_path, batch_size=20)
 
-    annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles, output_path=output_path,
-                                              pixel_size=parser.pixel_size, stitch_radius=stitch_radius,
-                                              eight_bit=True)
+    annotation_tiles_loaded = parser.load_annotations_from_csv(base_header, csv_path)
+    print(annotation_tiles_loaded)
 
-    # save_annotation_info_to_csv(parser.annotation_tiles, csv_path)
-    # save_annotation_info_to_csv(annotation_tiles, csv_path)
+    # TODO: Add annotation_position_x & annotation_position_y to the csv file
+
+
+    # print(annotation_tiles['fork74'])
+    # print(annotation_tiles['Site of interest (48)'])
+
+
+
+
+    # annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles, output_path=output_path,
+    #                                           pixel_size=parser.pixel_size, stitch_radius=stitch_radius,
+    #                                           eight_bit=True)
+
 
 
 

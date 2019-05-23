@@ -4,6 +4,7 @@
 import xml.etree.ElementTree as ET
 import sys
 import numpy as np
+import pandas as pd
 import math
 from pathlib import Path
 import logging
@@ -56,8 +57,8 @@ class MapsXmlParser:
             image as a Path variable (img_path), its filename, the name of the layer (layer_name) and the relative
             position x & y of the tile within that layer (RelativeTilePosition_x & RelativeTilePosition_y), the
             absolute stage position of the annotation (Annotation_StagePosition_x and Annotation_StagePosition_y), the
-            position of the annotation within the tile image (in pixels, Annotation_img_position_x &
-            Annotation_img_position_y), a list of the surrounding tile names (surrounding_tile_names) and a list of
+            position of the annotation within the tile image (in pixels, Annotation_tile_img_position_x &
+            Annotation_tile_img_position_y), a list of the surrounding tile names (surrounding_tile_names) and a list of
             booleans of whether each of the surrounding tiles exist, including the tile itself (surrounding_tile_exists)
         stitch_radius (int): The number of images in each direction from the tile containing the annotation should be
             stitched.
@@ -467,7 +468,7 @@ class MapsXmlParser:
         filename, the name of the layer (layer_name) and the relative position x & y of the tile within that layer
         (RelativeTilePosition_x & RelativeTilePosition_y), the absolute stage position of the annotation
         (Annotation_StagePosition_x and Annotation_StagePosition_y), the position of the annotation within the tile
-        image (in pixels, Annotation_img_position_x & Annotation_img_position_y).
+        image (in pixels, Annotation_tile_img_position_x & Annotation_tile_img_position_y).
         The surrounding_tile_names and surrounding_tile_exists are added in determine_surrounding_tiles
 
         """
@@ -528,8 +529,8 @@ class MapsXmlParser:
 
                 annotation_img_position = [int(round(self.img_height / 2 - x_shift)),
                                            int(round(self.img_width / 2 - y_shift))]
-                self.annotation_tiles[annotation_name]['Annotation_img_position_x'] = annotation_img_position[0]
-                self.annotation_tiles[annotation_name]['Annotation_img_position_y'] = annotation_img_position[1]
+                self.annotation_tiles[annotation_name]['Annotation_tile_img_position_x'] = annotation_img_position[0]
+                self.annotation_tiles[annotation_name]['Annotation_tile_img_position_y'] = annotation_img_position[1]
 
             else:
                 logging.warning('Annotation {} is not within any of the tiles and will be ignored'.
@@ -566,3 +567,91 @@ class MapsXmlParser:
                         self.annotation_tiles[annotation_name]['surrounding_tile_exists'].append(True)
                     else:
                         self.annotation_tiles[annotation_name]['surrounding_tile_exists'].append(False)
+
+    def save_annotation_tiles_to_csv(self, base_header, csv_path, batch_size=0):
+        """Saves the information about all annotations to a csv file
+
+        Goes through the self.annotation_tiles dictionary and saves it to a csv file. Overwrites any existing file in
+        the same location. Can write everything into one csv file (default) or into multiple batches of a given size
+
+        Args:
+            base_header (list): list of strings that will be headers but will not contain any content
+            csv_path (Path): pathlib Path to the csv file that will be created. Must end in .csv
+            batch_size (int): The size of each batch. Defaults to 0. If it's 0, everything is saved into one csv file.
+                Otherwise, the dataframe is divided into batches of batch_size and saved to separate csv files
+
+        """
+        assert(str(csv_path).endswith('.csv'))
+        # Initialize empty csv file (or csv files if batch mode is used)
+        base_header_2 = ['Image'] + base_header
+        header_addition = list(list(self.annotation_tiles.values())[0].keys())
+        if batch_size == 0:
+            csv_header = pd.DataFrame(columns=base_header_2 + header_addition)
+            csv_header.to_csv(csv_path, index=False)
+        else:
+            nb_batches = int(math.ceil(len(self.annotation_tiles.keys()) / batch_size))
+            for j in range(nb_batches):
+                csv_batch_path = csv_path[:-4] + '_{}.csv'.format(j)
+                csv_header = pd.DataFrame(columns=base_header_2 + header_addition)
+                csv_header.to_csv(csv_batch_path, index=False)
+
+        for i, annotation_name in enumerate(self.annotation_tiles):
+            current_annotation = {'Image': annotation_name}
+            for header in base_header:
+                current_annotation[header] = ''
+
+            for info_key in self.annotation_tiles[annotation_name]:
+                current_annotation[info_key] = self.annotation_tiles[annotation_name][info_key]
+                if type(current_annotation[info_key]) == list:
+                    current_annotation[info_key] = '[' + ','.join(map(str, current_annotation[info_key])) + ']'
+
+            current_annotation_pd = pd.DataFrame(current_annotation, index=[0])
+
+            # Default: everything is saved into one csv file
+            if batch_size == 0:
+                with open(str(csv_path), 'a') as f:
+                    current_annotation_pd.to_csv(f, header=False, index=False)
+            else:
+                current_batch = int(i/batch_size)
+                csv_batch_path = csv_path[:-4] + '_{}.csv'.format(current_batch)
+                with open(str(csv_batch_path), 'a') as f:
+                    current_annotation_pd.to_csv(f, header=False, index=False)
+
+    @staticmethod
+    def load_annotations_from_csv(base_header, csv_path):
+        """Load the annotations saved by sites_of_interest_parser.save_annotation_tiles_to_csv
+
+        Recreates a dictionary for all the contents except the columns of the base_header
+        Parses the string of a list for surrounding_tile_exists & surrounding_tile_names back to a list
+
+        Args:
+            base_header (list): list of column headers that will be ignored when loading the data
+            csv_path (Path): pathlib Path to the csv file that will be created. Must end in .csv
+
+        Returns:
+            dict: annotation_tiles
+
+        """
+        annotation_tiles = {}
+        annotation_dataframe = pd.read_csv(csv_path)
+        column_names = list(annotation_dataframe.columns.values)
+        # Loop through all the rows of the dataframe, add them one by one to the annotation tiles
+        for index, row in annotation_dataframe.iterrows():
+            annotation_tiles[row['Image']] = {}
+
+            # Loop through all the columns of the dataframe. If they are not part of the base header or the Image name,
+            # add them to the dictionary
+            for column in column_names:
+                if column not in base_header + ['Image']:
+                    if column == 'surrounding_tile_names':
+                        content_list = row[column].strip('[]').split(',')
+                        annotation_tiles[row['Image']][column] = content_list
+                    elif column == 'surrounding_tile_exists':
+                        content_list = [bool(i) for i in row[column].strip('[]').split(',')]
+                        annotation_tiles[row['Image']][column] = content_list
+                    elif column == 'img_path':
+                        annotation_tiles[row['Image']][column] = Path(row[column])
+                    else:
+                        annotation_tiles[row['Image']][column] = row[column]
+
+        return annotation_tiles
