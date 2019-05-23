@@ -1,25 +1,10 @@
 import logging
-import os
 from pathlib import Path
-import pandas as pd
 import re
 import numpy as np
-# import cv2
-# import shutil
+
 
 import imagej
-
-from sites_of_interest_parser import MapsXmlParser
-
-# Headers of the
-base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missing Link Fork',
-               'fork symetric', 'fork asymetric', 'reversed fork symetric', 'reversed fork asymetric',
-               'size reversed fork (nm)', 'dsDNA RF', 'internal ssDNA RF', 'ssDNA end RF',
-               'total ssDNA RF	gaps',
-               'gaps', 'sister	gaps', 'parental', 'size gaps (nm)', 'junction ssDNA size (nm)',
-               'hemicatenane', 'termination intermediate', 'bubble', 'hemireplicated bubble',
-               'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
-               'list for ssDNA at junction (nt)']
 
 
 def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size: float, stitch_radius: int = 1,
@@ -52,6 +37,7 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
 
             # TODO: Change to running plugin with lower level APIs, directly extracting the stitching configuration.
             # See here: https://github.com/imagej/pyimagej/issues/35
+            # https://forum.image.sc/t/using-imagej-functions-like-type-conversion-and-setting-pixel-size-via-pyimagej/25755/10
 
             # # load images: figure out how to load multiple images into the same container
             # # BF = autoclass('ij.BioFormats')
@@ -123,6 +109,8 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             ij.io().save(stitched_img_dataset, str(output_path / output_filename))
             ij.window().clear()
 
+            # TODO: Check stitching results directly from API => Will allow parallelization of stitching without race
+            #  conditions about reading out the stitching coordinates
             # Get the information about how much the center image has been shifted, where the fork is placed in
             # the stitched image
             config_path_registered = img_path / 'TileConfiguration.registered.txt'
@@ -171,53 +159,49 @@ def check_stitching_result(stitching_config, annotation_coordinates):
 
 
 
-def main():
-    base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
-    # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
-    project_name = '8330_siNeg_CPT_3rd'
-    # project_name = '8330_siXRCC3_CPT_3rd_2ul'
-    # project_name = '8373_3_siXRCC3_HU_1st_y1'
-    project_folder_path = os.path.join(base_path + project_name)
-    logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '_2.log'), level=logging.INFO,
-                        format='%(asctime)s %(message)s')
-    logging.info('Processing experiment {}'.format(project_name))
-    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects//'
-    stitch_radius = 1
-
-    # Check if a folder for the stitched forks already exists. If not, create that folder
-    output_folder = 'stitchedForks'
-    output_path = Path(project_folder_path) / Path(output_folder)
-
-    os.makedirs(str(output_path), exist_ok=True)
-
-    highmag_layer = 'highmag'
-
-    # csv_path = os.path.join(base_path, project_name + '_annotations' + '.csv')
-    csv_path = '/Users/Joel/Desktop/test_annotations.csv'
-
-    parser = MapsXmlParser(project_folder=project_folder_path, use_unregistered_pos=True,
-                           name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
-    annotation_tiles = parser.parse_xml()
-    parser.save_annotation_tiles_to_csv(base_header, csv_path, batch_size=20)
-
-    annotation_tiles_loaded = parser.load_annotations_from_csv(base_header, csv_path)
-    print(annotation_tiles_loaded)
-
-    # TODO: Add annotation_position_x & annotation_position_y to the csv file
-
-
-    # print(annotation_tiles['fork74'])
-    # print(annotation_tiles['Site of interest (48)'])
-
-
-
-
-    # annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles, output_path=output_path,
-    #                                           pixel_size=parser.pixel_size, stitch_radius=stitch_radius,
-    #                                           eight_bit=True)
+# def main():
+#     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
+#     # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
+#     project_name = '8330_siNeg_CPT_3rd'
+#     # project_name = '8330_siXRCC3_CPT_3rd_2ul'
+#     # project_name = '8373_3_siXRCC3_HU_1st_y1'
+#     project_folder_path = os.path.join(base_path + project_name)
+#     logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '_2.log'), level=logging.INFO,
+#                         format='%(asctime)s %(message)s')
+#     logging.info('Processing experiment {}'.format(project_name))
+#     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects//'
+#     stitch_radius = 1
+#     batch_size = 20
+#
+#     # Check if a folder for the stitched forks already exists. If not, create that folder
+#     output_folder = 'stitchedForks'
+#     output_path = Path(project_folder_path) / Path(output_folder)
+#
+#     os.makedirs(str(output_path), exist_ok=True)
+#
+#     highmag_layer = 'highmag'
+#
+#     # csv_path = os.path.join(base_path, project_name + '_annotations' + '.csv')
+#     csv_path = '/Users/Joel/Desktop/test_annotations.csv'
+#
+#     parser = MapsXmlParser(project_folder=project_folder_path, use_unregistered_pos=True,
+#                            name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
+#     annotation_tiles = parser.parse_xml()
+#     annotation_csvs = parser.save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_size=batch_size)
+#
+#     for annotation_csv in annotation_csvs:
+#         annotation_tiles_loaded = parser.load_annotations_from_csv(base_header, annotation_csv)
+#         print(annotation_tiles_loaded)
+#
+#         # stitched_annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles, output_path=output_path,
+#         #                                           pixel_size=parser.pixel_size, stitch_radius=stitch_radius,
+#         #                                           eight_bit=True)
+#         #
+#         # csv_stitched_path = '/Users/Joel/Desktop/test_annotations.csv'
+#         # parser.save_annotation_tiles_to_csv(stitched_annotation_tiles, base_header, csv_stitched_path, batch_size=batch_size)
 
 
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
