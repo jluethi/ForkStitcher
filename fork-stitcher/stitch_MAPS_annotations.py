@@ -6,12 +6,13 @@ import numpy as np
 
 import imagej
 
+# TODO: Fix logging, not going to file but to console at the moment
 
-def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size: float, stitch_radius: int = 1,
+
+def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size: float, ij, stitch_radius: int = 1,
                            eight_bit: bool = False):
     # This function takes the parser object containing all the information about the MAPS project and its annotations.
     # It the performs stitching
-    # TODO: Find a way to call the Fiji stitching without falling back to the local Fiji library
     # Stitching plugin only runs when the local Fiji installation is being used. When a current imageJ gateway
     # is used, it does not find the plugin. Maybe have a distinct local Fiji installation that is hidden otherwise?
     # Maven-based initialization doesn't currently work for ImageJ1 plugins like Grid stitching, but I can use lower
@@ -24,7 +25,7 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
     # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
 
     # Local imageJ initialization
-    ij = imagej.init('/Applications/Fiji.app')
+    # ij = imagej.init('/Applications/Fiji.app')
     # ij = imagej.init('C:\\Program Files\\Fiji')
     for annotation_name in annotation_tiles:
         number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
@@ -36,37 +37,9 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             img_path = annotation_tiles[annotation_name]['img_path']
 
             # TODO: Change to running plugin with lower level APIs, directly extracting the stitching configuration.
+            #  I'm working on this on the imagej_api branch
             # See here: https://github.com/imagej/pyimagej/issues/35
             # https://forum.image.sc/t/using-imagej-functions-like-type-conversion-and-setting-pixel-size-via-pyimagej/25755/10
-
-            # # load images: figure out how to load multiple images into the same container
-            # # BF = autoclass('ij.BioFormats')
-            # # img = BF.open(str(img_path / center_filename))
-            #
-            # from jnius import autoclass
-            # image_plus_class = autoclass('ij.ImagePlus')
-            # imps = []
-            #
-            # for neighbor in annotation_tiles[annotation_name]['surrounding_tile_names']:
-            #     print(neighbor)
-            #     imagej2_img = ij.io().open(str(img_path / neighbor))
-            #     imps.append(ij.convert().convert(imagej2_img, image_plus_class))
-            # # Define starting positions
-            # positions = ij.py.to_java([[0, 0], [3686, 0], [7373, 0], [0, 3686], [3686, 3686], [7373, 3686], [0, 7373],
-            #              [3686, 7373], [7373, 7373]])
-            # java_imgs = ij.py.to_java(imps)
-            #
-            # # dimensionality = ij.py.to_java(2)
-            # # computeOverlap = ij.py.to_java(True)
-            # dimensionality = 2
-            # computeOverlap = True
-            # StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
-            # models = StitchingUtils.computeStitching(java_imgs, positions, dimensionality, computeOverlap)
-            #
-            # resultImp = StitchingUtils.fuseTiles(imps, models, dimensionality)
-            #
-            # # Stop here for testing purposes. Runs fine through whole dataset
-            # break
 
 
             # Potentially: Test if 'Save computation time (but use more RAM)' option speeds up the stitching
@@ -107,6 +80,7 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
 
             output_filename = annotation_name + '.png'
             ij.io().save(stitched_img_dataset, str(output_path / output_filename))
+            # Closing any ImageJ1 windows
             ij.window().clear()
 
             # TODO: Check stitching results directly from API => Will allow parallelization of stitching without race
