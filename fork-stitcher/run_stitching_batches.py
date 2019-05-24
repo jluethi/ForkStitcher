@@ -34,7 +34,7 @@ def stitch_batch(annotation_csv, output_path, pixel_size, stitch_radius):
     csv_stitched_path = annotation_csv[:-4] + '_stitched.csv'
 
     sites_of_interest_parser.save_annotation_tiles_to_csv(stitched_annotation_tiles, base_header, csv_stitched_path)
-    os.remove(csv_stitched_path)
+    os.remove(annotation_csv)
 
 
 def main():
