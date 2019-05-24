@@ -3,6 +3,8 @@ import logging
 from pathlib import Path
 from multiprocessing import Pool
 
+import imagej
+
 import sites_of_interest_parser
 import stitch_MAPS_annotations
 
@@ -16,6 +18,9 @@ base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missin
                'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
                'list for ssDNA at junction (nt)']
 
+# ij = imagej.init('/Applications/Fiji.app')
+# ij = imagej.init('C:\\Program Files\\Fiji')
+
 
 def stitch_batch(annotation_csv, output_path, pixel_size, stitch_radius, csv_base_path, project_name, batch_size):  #
     annotation_tiles_loaded = sites_of_interest_parser.load_annotations_from_csv(base_header, annotation_csv)
@@ -26,7 +31,7 @@ def stitch_batch(annotation_csv, output_path, pixel_size, stitch_radius, csv_bas
                                                                                stitch_radius=stitch_radius,
                                                                                eight_bit=True)
 
-    csv_stitched_path = os.path.join(csv_base_path, project_name + '_stitched_annotations' + '.csv')
+    csv_stitched_path = annotation_csv[:-4] + '_stitched.csv'
 
     sites_of_interest_parser.save_annotation_tiles_to_csv(stitched_annotation_tiles, base_header, csv_stitched_path, batch_size=batch_size)
 
@@ -51,7 +56,7 @@ def main():
     logging.info('Processing experiment {}'.format(project_name))
 
     # Make folders for stitched Forks & csv files
-    output_folder = 'stitchedForks'
+    output_folder = 'stitchedForks-linearFusion'
     output_path = Path(project_folder_path) / Path(output_folder)
     # Check if a folder for the stitched forks already exists. If not, create that folder
     os.makedirs(str(output_path), exist_ok=True)
@@ -72,16 +77,17 @@ def main():
                                                                                 csv_path=csv_path,
                                                                                 batch_size=batch_size)
 
-    maxProcesses = 4
-    p = Pool(processes=maxProcesses)
+    maxProcesses = 1
+    with Pool(processes=maxProcesses) as p:
+        for annotation_csv in annotation_csv_list:
+            # stitch_batch(annotation_csv, output_path, parser.pixel_size, stitch_radius,
+            #              csv_base_path, project_name, batch_size, ij)
+            p.apply_async(stitch_batch,
+                          args=(annotation_csv, output_path, parser.pixel_size, stitch_radius, csv_base_path,
+                                project_name, batch_size))
 
-    for annotation_csv in annotation_csv_list:
-        # stitch_batch(annotation_csv, output_path, parser.pixel_size, stitch_radius,
-        #              csv_base_path, project_name, batch_size)
-        p.apply_async(stitch_batch, args=(annotation_csv, output_path, parser.pixel_size, stitch_radius, csv_base_path,
-                                          project_name, batch_size))
-    p.close()
-    p.join()
+        p.close()
+        p.join()
 
 
     # TODO: Fuse the csv files of the stitched forks into a single csv file

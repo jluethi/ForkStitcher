@@ -3,9 +3,15 @@ from pathlib import Path
 import re
 import numpy as np
 
+import sites_of_interest_parser
+import os
 
 import imagej
 
+# ij = imagej.init('/Applications/Fiji.app')
+# ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
+
+# TODO: Fix logging, not going to file but to console at the moment
 
 def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size: float, stitch_radius: int = 1,
                            eight_bit: bool = False):
@@ -21,10 +27,10 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
     # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10')
 
     # Maven initialization with stitching plugin wrappers
-    # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
+    ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
 
     # Local imageJ initialization
-    ij = imagej.init('/Applications/Fiji.app')
+    # ij = imagej.init('/Applications/Fiji.app')
     # ij = imagej.init('C:\\Program Files\\Fiji')
     for annotation_name in annotation_tiles:
         number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
@@ -39,57 +45,67 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             # See here: https://github.com/imagej/pyimagej/issues/35
             # https://forum.image.sc/t/using-imagej-functions-like-type-conversion-and-setting-pixel-size-via-pyimagej/25755/10
 
-            # # load images: figure out how to load multiple images into the same container
-            # # BF = autoclass('ij.BioFormats')
-            # # img = BF.open(str(img_path / center_filename))
-            #
-            # from jnius import autoclass
-            # image_plus_class = autoclass('ij.ImagePlus')
-            # imps = []
-            #
-            # for neighbor in annotation_tiles[annotation_name]['surrounding_tile_names']:
-            #     print(neighbor)
-            #     imagej2_img = ij.io().open(str(img_path / neighbor))
-            #     imps.append(ij.convert().convert(imagej2_img, image_plus_class))
-            # # Define starting positions
-            # positions = ij.py.to_java([[0, 0], [3686, 0], [7373, 0], [0, 3686], [3686, 3686], [7373, 3686], [0, 7373],
-            #              [3686, 7373], [7373, 7373]])
-            # java_imgs = ij.py.to_java(imps)
-            #
-            # # dimensionality = ij.py.to_java(2)
-            # # computeOverlap = ij.py.to_java(True)
-            # dimensionality = 2
-            # computeOverlap = True
-            # StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
-            # models = StitchingUtils.computeStitching(java_imgs, positions, dimensionality, computeOverlap)
-            #
-            # resultImp = StitchingUtils.fuseTiles(imps, models, dimensionality)
-            #
-            # # Stop here for testing purposes. Runs fine through whole dataset
-            # break
+            # load images: figure out how to load multiple images into the same container
+            # BF = autoclass('ij.BioFormats')
+            # img = BF.open(str(img_path / center_filename))
 
-
-            # Potentially: Test if 'Save computation time (but use more RAM)' option speeds up the stitching
-            plugin = 'Grid/Collection stitching'
-            index_x = int(center_filename[9:12]) - stitch_radius
-            index_y = int(center_filename[5:8]) - stitch_radius
-            args = {'type': '[Filename defined position]', 'order': '[Defined by filename         ]',
-                    'grid_size_x': '3', 'grid_size_y': '3', 'tile_overlap': '8', 'first_file_index_x': str(index_x),
-                    'first_file_index_y': str(index_y), 'directory': img_path,
-                    'file_names': 'Tile_{yyy}-{xxx}-000000_0-000.tif', 'output_textfile_name': 'TileConfiguration.txt',
-                    'fusion_method': '[Intensity of random input tile]', 'regression_threshold': '0.15',
-                    'max/avg_displacement_threshold': '0.20', 'absolute_displacement_threshold': '0.30',
-                    'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
-                    'image_output': '[Fuse and display]'}
-            ij.py.run_plugin(plugin, args)
-
-            # Use imageJ to set bit depth, pixel size & save the image.
             from jnius import autoclass
+            image_plus_class = autoclass('ij.ImagePlus')
+            imps = []
+
+            for neighbor in annotation_tiles[annotation_name]['surrounding_tile_names']:
+                print(neighbor)
+                imagej2_img = ij.io().open(str(img_path / neighbor))
+                imps.append(ij.convert().convert(imagej2_img, image_plus_class))
+            java_imgs = ij.py.to_java(imps)
+            # Define starting positions
+            positions_jlist = ij.py.to_java([])
+            positions_jlist.add([0.0, 0.0])
+            positions_jlist.add([3686.0, 0.0])
+            positions_jlist.add([7373.0, 0.0])
+            positions_jlist.add([0.0, 3686.0])
+            positions_jlist.add([3686.0, 3686.0])
+            positions_jlist.add([7373.0, 3686.0])
+            positions_jlist.add([0.0, 7373.0])
+            positions_jlist.add([3686.0, 7373.0])
+            positions_jlist.add([7373.0, 7373.0])
+
+            dimensionality = 2
+            computeOverlap = True
+            StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
+            models = StitchingUtils.computeStitching(java_imgs, positions_jlist, dimensionality, computeOverlap)
+
+            # TODO: Get Stitching parameters out of models
+            # translation_model = autoclass('ij.mpicbg.trakem2.transform')
+
+            # model_results = ij.py.from_java(models)
+            # print(model_results)
+
+            # TODO: Fuse by Overlap, not linear fusion
+            stitched_img = StitchingUtils.fuseTiles(java_imgs, models, dimensionality)
+
+            # # Potentially: Test if 'Save computation time (but use more RAM)' option speeds up the stitching
+            # plugin = 'Grid/Collection stitching'
+            # index_x = int(center_filename[9:12]) - stitch_radius
+            # index_y = int(center_filename[5:8]) - stitch_radius
+            # args = {'type': '[Filename defined position]', 'order': '[Defined by filename         ]',
+            #         'grid_size_x': '3', 'grid_size_y': '3', 'tile_overlap': '8', 'first_file_index_x': str(index_x),
+            #         'first_file_index_y': str(index_y), 'directory': img_path,
+            #         'file_names': 'Tile_{yyy}-{xxx}-000000_0-000.tif', 'output_textfile_name': 'TileConfiguration.txt',
+            #         'fusion_method': '[Intensity of random input tile]', 'regression_threshold': '0.15',
+            #         'max/avg_displacement_threshold': '0.20', 'absolute_displacement_threshold': '0.30',
+            #         'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
+            #         'image_output': '[Fuse and display]'}
+            # ij.py.run_plugin(plugin, args)
+
+
+            # # Use imageJ to set bit depth, pixel size & save the image.
+            # from jnius import autoclass
             IJ = autoclass('ij.IJ')
 
             # Get the open window with the stitched image
-            WindowManager = autoclass('ij.WindowManager')
-            stitched_img = WindowManager.getCurrentImage()
+            # WindowManager = autoclass('ij.WindowManager')
+            # stitched_img = WindowManager.getCurrentImage()
 
             # Set the pixel size. Fiji seems to round 0.499 nm to 0.5 nm and I can't see anything I can do about that
             pixel_size_nm = str(pixel_size * 10e8)
@@ -113,19 +129,19 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             #  conditions about reading out the stitching coordinates
             # Get the information about how much the center image has been shifted, where the fork is placed in
             # the stitched image
-            config_path_registered = img_path / 'TileConfiguration.registered.txt'
-            with open(config_path_registered, 'r') as f:
-                stitching_config = f.read()
-
-            original_annotation_coord = [annotation_tiles[annotation_name]['Annotation_tile_img_position_x'],
-                                         annotation_tiles[annotation_name]['Annotation_tile_img_position_y']]
-            stitched_annotation_coordinates = check_stitching_result(stitching_config, original_annotation_coord)
-
-            # Add the information about where the fork is in the stitched image back to the dictionary, such that it
-            # can be saved to csv afterwards
-            annotation_tiles[annotation_name]['annotation_position_x'] = stitched_annotation_coordinates[0]
-            annotation_tiles[annotation_name]['annotation_position_y'] = stitched_annotation_coordinates[1]
-
+            # config_path_registered = img_path / 'TileConfiguration.registered.txt'
+            # with open(config_path_registered, 'r') as f:
+            #     stitching_config = f.read()
+            #
+            # original_annotation_coord = [annotation_tiles[annotation_name]['Annotation_tile_img_position_x'],
+            #                              annotation_tiles[annotation_name]['Annotation_tile_img_position_y']]
+            # stitched_annotation_coordinates = check_stitching_result(stitching_config, original_annotation_coord)
+            #
+            # # Add the information about where the fork is in the stitched image back to the dictionary, such that it
+            # # can be saved to csv afterwards
+            # annotation_tiles[annotation_name]['annotation_position_x'] = stitched_annotation_coordinates[0]
+            # annotation_tiles[annotation_name]['annotation_position_y'] = stitched_annotation_coordinates[1]
+            #
             # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with changed
             #  parameters or by putting the individual images in a folder so that they could be stitched manually)
 
@@ -160,48 +176,59 @@ def check_stitching_result(stitching_config, annotation_coordinates):
 
 
 # def main():
-#     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
-#     # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
-#     project_name = '8330_siNeg_CPT_3rd'
-#     # project_name = '8330_siXRCC3_CPT_3rd_2ul'
-#     # project_name = '8373_3_siXRCC3_HU_1st_y1'
-#     project_folder_path = os.path.join(base_path + project_name)
-#     logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '_2.log'), level=logging.INFO,
-#                         format='%(asctime)s %(message)s')
-#     logging.info('Processing experiment {}'.format(project_name))
-#     # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects//'
-#     stitch_radius = 1
-#     batch_size = 20
-#
-#     # Check if a folder for the stitched forks already exists. If not, create that folder
-#     output_folder = 'stitchedForks'
-#     output_path = Path(project_folder_path) / Path(output_folder)
-#
-#     os.makedirs(str(output_path), exist_ok=True)
-#
-#     highmag_layer = 'highmag'
-#
-#     # csv_path = os.path.join(base_path, project_name + '_annotations' + '.csv')
-#     csv_path = '/Users/Joel/Desktop/test_annotations.csv'
-#
-#     parser = MapsXmlParser(project_folder=project_folder_path, use_unregistered_pos=True,
-#                            name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
-#     annotation_tiles = parser.parse_xml()
-#     annotation_csvs = parser.save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_size=batch_size)
-#
-#     for annotation_csv in annotation_csvs:
-#         annotation_tiles_loaded = parser.load_annotations_from_csv(base_header, annotation_csv)
-#         print(annotation_tiles_loaded)
-#
-#         # stitched_annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles, output_path=output_path,
-#         #                                           pixel_size=parser.pixel_size, stitch_radius=stitch_radius,
-#         #                                           eight_bit=True)
-#         #
-#         # csv_stitched_path = '/Users/Joel/Desktop/test_annotations.csv'
-#         # parser.save_annotation_tiles_to_csv(stitched_annotation_tiles, base_header, csv_stitched_path, batch_size=batch_size)
+    # # Headers of the categorization & the measurements for forks. Values filled in by users afterwards
+    # base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missing Link Fork',
+    #                'fork symetric', 'fork asymetric', 'reversed fork symetric', 'reversed fork asymetric',
+    #                'size reversed fork (nm)', 'dsDNA RF', 'internal ssDNA RF', 'ssDNA end RF',
+    #                'total ssDNA RF	gaps',
+    #                'gaps', 'sister	gaps', 'parental', 'size gaps (nm)', 'junction ssDNA size (nm)',
+    #                'hemicatenane', 'termination intermediate', 'bubble', 'hemireplicated bubble',
+    #                'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
+    #                'list for ssDNA at junction (nt)']
+    #
+    # base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
+    # # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
+    # project_name = '8330_siNeg_CPT_3rd'
+    # # project_name = '8330_siXRCC3_CPT_3rd_2ul'
+    # # project_name = '8373_3_siXRCC3_HU_1st_y1'
+    # project_folder_path = os.path.join(base_path + project_name)
+    # logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '_2.log'), level=logging.INFO,
+    #                     format='%(asctime)s %(message)s')
+    # logging.info('Processing experiment {}'.format(project_name))
+    # # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects//'
+    # stitch_radius = 1
+    # batch_size = 20
+    #
+    # # Check if a folder for the stitched forks already exists. If not, create that folder
+    # output_folder = 'stitchedForks-test'
+    # output_path = Path(project_folder_path) / Path(output_folder)
+    #
+    # os.makedirs(str(output_path), exist_ok=True)
+    #
+    # highmag_layer = 'highmag'
+    #
+    # # csv_path = os.path.join(base_path, project_name + '_annotations' + '.csv')
+    # csv_path = '/Users/Joel/Desktop/test_annotations.csv'
+    #
+    # parser = sites_of_interest_parser.MapsXmlParser(project_folder=project_folder_path, use_unregistered_pos=True,
+    #                                                 name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
+    # annotation_tiles = parser.parse_xml()
+    # annotation_csvs = sites_of_interest_parser.save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_size=batch_size)
+    #
+    # for annotation_csv in annotation_csvs:
+    #     annotation_tiles_loaded = sites_of_interest_parser.load_annotations_from_csv(base_header, annotation_csv)
+    #     print(annotation_tiles_loaded)
+    #
+    #     stitched_annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles, output_path=output_path,
+    #                                               pixel_size=parser.pixel_size, stitch_radius=stitch_radius,
+    #                                               eight_bit=True)
+
+        #
+        # csv_stitched_path = '/Users/Joel/Desktop/test_annotations.csv'
+        # parser.save_annotation_tiles_to_csv(stitched_annotation_tiles, base_header, csv_stitched_path, batch_size=batch_size)
 
 
 
-
+#
 # if __name__ == "__main__":
 #     main()
