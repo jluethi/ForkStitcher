@@ -19,10 +19,10 @@ class Stitcher:
 
         self.project_name = project_name
         self.project_folder_path = Path(base_path) / project_name
-        output_folder = 'stitchedForks'
+        output_folder = 'stitchedForks_test'
         self.output_path = Path(self.project_folder_path) / Path(output_folder)
 
-        csv_folder = 'annotation_csv'
+        csv_folder = 'annotation_csv_tests'
         self.csv_base_path = Path(self.project_folder_path) / csv_folder
 
         # Headers of the categorization & the measurements for forks. Values filled in by users afterwards
@@ -42,112 +42,130 @@ class Stitcher:
         for annotation_name in annotation_tiles:
             number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
             # If the image files for the 8 neighbors and the tile exist, stitch the images
-            if number_existing_neighbor_tiles == 9:
-                logging.info('Stitching {}'.format(annotation_name))
-                img_path = annotation_tiles[annotation_name]['img_path']
 
-                # Uses lower level ImageJ APIs to do the stitching. Avoiding calling ImageJ1 plugins allows to use a maven
-                # distribution of ImageJ and makes this parallelizable as no temporary files are written and read anymore.
-                # See here: https://github.com/imagej/pyimagej/issues/35
-                # https://forum.image.sc/t/using-imagej-functions-like-type-conversion-and-setting-pixel-size-via-pyimagej/25755/10
+            logging.info('Stitching {}'.format(annotation_name))
+            img_path = annotation_tiles[annotation_name]['img_path']
 
-                from jnius import autoclass
-                image_plus_class = autoclass('ij.ImagePlus')
-                imps = []
+            # Uses lower level ImageJ APIs to do the stitching. Avoiding calling ImageJ1 plugins allows to use a maven
+            # distribution of ImageJ and makes this parallelizable as no temporary files are written and read anymore.
+            # See here: https://github.com/imagej/pyimagej/issues/35
+            # https://forum.image.sc/t/using-imagej-functions-like-type-conversion-and-setting-pixel-size-via-pyimagej/25755/10
 
-                # TODO: Test if converting to 8bit when loading improves overall performance
-                for neighbor in annotation_tiles[annotation_name]['surrounding_tile_names']:
+            from jnius import autoclass
+            image_plus_class = autoclass('ij.ImagePlus')
+            imps = []
+
+            # TODO: Test if converting to 8bit when loading improves overall performance
+            for i, neighbor in enumerate(annotation_tiles[annotation_name]['surrounding_tile_names']):
+                if annotation_tiles[annotation_name]['surrounding_tile_exists'][i]:
                     print(neighbor)
                     imagej2_img = self.ij.io().open(str(img_path / neighbor))
                     imps.append(self.ij.convert().convert(imagej2_img, image_plus_class))
 
-                java_imgs = self.ij.py.to_java(imps)
-                # Define starting positions
-                positions_jlist = self.ij.py.to_java([])
-                positions_jlist.add([0.0, 0.0])
-                positions_jlist.add([3686.0, 0.0])
-                positions_jlist.add([7373.0, 0.0])
-                positions_jlist.add([0.0, 3686.0])
-                positions_jlist.add([3686.0, 3686.0])
-                positions_jlist.add([7373.0, 3686.0])
-                positions_jlist.add([0.0, 7373.0])
-                positions_jlist.add([3686.0, 7373.0])
-                positions_jlist.add([7373.0, 7373.0])
-                original_positions = np.array(positions_jlist)
+            java_imgs = self.ij.py.to_java(imps)
+            # Define starting positions based on what neighbor tiles exist
 
-                dimensionality = 2
-                compute_overlap = True
-                StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
-                models = StitchingUtils.computeStitching(java_imgs, positions_jlist, dimensionality, compute_overlap)
-
-                # Get the information about how much the center image has been shifted, where the fork is placed in
-                # the stitched image
-                stitching_params = []
-                for model in models:
-                    params = [0.0] * 6
-                    model.toArray(params)
-                    stitching_params.append(params[4:])
-
-                original_annotation_coord = [annotation_tiles[annotation_name]['Annotation_tile_img_position_x'],
-                                             annotation_tiles[annotation_name]['Annotation_tile_img_position_y']]
-
-                [perform_stitching, stitched_coordinates] = self.process_stitching_params(stitching_params,
-                                                                                          original_annotation_coord,
-                                                                                          stitch_threshold,
-                                                                                          original_positions)
-
-                # If the calculate stitching is reasonable, perform the stitching. Otherwise, log a warning
-                if perform_stitching:
-                    # Add the information about where the fork is in the stitched image back to the dictionary,
-                    # such that it can be saved to csv afterwards
-                    annotation_tiles[annotation_name]['annotation_position_x'] = stitched_coordinates[0]
-                    annotation_tiles[annotation_name]['annotation_position_y'] = stitched_coordinates[1]
-
-                    Fusion = autoclass('mpicbg.stitching.fusion.Fusion')
-                    UnsignedShortType = autoclass('net.imglib2.type.numeric.integer.UnsignedShortType')
-                    target_type = UnsignedShortType()
-                    subpixel_accuracy = False
-                    ignore_zero_values = False
-                    stitched_img = Fusion.fuse(target_type, java_imgs, models, dimensionality, subpixel_accuracy, 5,
-                                               None, False, ignore_zero_values, False)
-
-                    # # Use imageJ to set bit depth, pixel size & save the image.
-                    IJ = autoclass('ij.IJ')
-
-                    # Set the pixel size. Fiji rounds 0.499 nm to 0.5 nm and I can't see anything I can do about that
-                    pixel_size_nm = str(annotation_tiles[annotation_name]['pixel_size'] * 10e8)
-                    pixel_size_command = "channels=1 slices=1 frames=1 unit=nm pixel_width=" + pixel_size_nm + \
-                                         " pixel_height=" + pixel_size_nm + " voxel_depth=1.0 global"
-                    IJ.run(stitched_img, "Properties...", pixel_size_command)
-
-                    # Convert to 8 bit
-                    if eight_bit:
-                        IJ.run(stitched_img, "8-bit", "")
-
-                    # Convert it to an ImageJ2 dataset. It was an imageJ1 ImagePlus before and the save function can't
-                    # handle that. See: https://github.com/imagej/pyimagej/issues/35
-                    stitched_img_dataset = self.ij.py.to_dataset(stitched_img)
-
-                    output_filename = annotation_name + '.png'
-                    self.ij.io().save(stitched_img_dataset, str(self.output_path / output_filename))
-
-                    # TODO: Find a way to do improved memory management or reset the running instance, e.g.:
-                    #  https://forum.image.sc/t/how-to-find-memory-leaks-in-plugins-what-needs-to-get-disposed/10211/12
-                    # ij.getContext().dispose()
-                    self.ij.window().clear()
-
-                else:
-                    # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with
-                    #  changed parameters or by putting the individual images in a folder so that they could be
-                    #  stitched manually)
-                    logging.warning('Not stitching fork {}, because the stitching calculations displaced the images more '
-                                    'than {} pixels'.format(annotation_name, stitch_threshold))
-
+            positions_jlist = self.ij.py.to_java([])
+            # All tiles exist
+            if sum(annotation_tiles[annotation_name]['surrounding_tile_exists']) == 9:
+                positions = [[0.0, 0.0], [3686.0, 0.0], [7373.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0],
+                             [7373.0, 3686.0], [0.0, 7373.0], [3686.0, 7373.0], [7373.0, 7373.0]]
+            # Edge tile: Top or bottom row is missing
+            elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [True, True, True, True, True, True,
+                                                                                  False, False, False] \
+                    or annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, False, False, True, True,
+                                                                                        True, True, True, True]:
+                positions = [[0.0, 0.0], [3686.0, 0.0], [7373.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0],
+                             [7373.0, 3686.0]]
+            # Edge tile: Left or right column is missing
+            elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, True, True, False, True, True,
+                                                                                  False, True, True] \
+                    or annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, True, True, False, True,
+                                                                                        True, False, True, True]:
+                positions = [[0.0, 0.0], [3686.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0], [0.0, 7373.0],
+                             [3686.0, 7373.0]]
+            # Corner Tile: Only 2x2 tiles to stitch
+            elif sum(annotation_tiles[annotation_name]['surrounding_tile_exists']) == 4:
+                positions = [[0.0, 0.0], [3686.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0]]
 
             else:
-                # TODO: Potentially implement stitching for edge-cases of non 3x3 tiles
-                logging.warning('Not stitching fork {}, because it is not surrounded by other tiles'.format(
-                        annotation_name))
+                logging.warning('Not stitching fork {}, because there is no rectangle of images to stitch. '
+                                'This stitching function is only made for 3x3, 2x3, 3x2 and 2x2 stitching. '
+                                'Those tiles do exist: {}'.format(annotation_name, annotation_tiles[annotation_name]
+                                                                  ['surrounding_tile_exists']))
+                break
+
+            for pos in positions:
+                positions_jlist.add(pos)
+            original_positions = np.array(positions_jlist)
+
+            dimensionality = 2
+            compute_overlap = True
+            StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
+            models = StitchingUtils.computeStitching(java_imgs, positions_jlist, dimensionality, compute_overlap)
+
+            # Get the information about how much the center image has been shifted, where the fork is placed in
+            # the stitched image
+            stitching_params = []
+            for model in models:
+                params = [0.0] * 6
+                model.toArray(params)
+                stitching_params.append(params[4:])
+
+            original_annotation_coord = [annotation_tiles[annotation_name]['Annotation_tile_img_position_x'],
+                                         annotation_tiles[annotation_name]['Annotation_tile_img_position_y']]
+
+            [perform_stitching, stitched_coordinates] = self.process_stitching_params(stitching_params,
+                                                                                      original_annotation_coord,
+                                                                                      stitch_threshold,
+                                                                                      original_positions)
+
+            # If the calculate stitching is reasonable, perform the stitching. Otherwise, log a warning
+            if perform_stitching:
+                # Add the information about where the fork is in the stitched image back to the dictionary,
+                # such that it can be saved to csv afterwards
+                annotation_tiles[annotation_name]['annotation_position_x'] = stitched_coordinates[0]
+                annotation_tiles[annotation_name]['annotation_position_y'] = stitched_coordinates[1]
+
+                Fusion = autoclass('mpicbg.stitching.fusion.Fusion')
+                UnsignedShortType = autoclass('net.imglib2.type.numeric.integer.UnsignedShortType')
+                target_type = UnsignedShortType()
+                subpixel_accuracy = False
+                ignore_zero_values = False
+                stitched_img = Fusion.fuse(target_type, java_imgs, models, dimensionality, subpixel_accuracy, 5,
+                                           None, False, ignore_zero_values, False)
+
+                # # Use imageJ to set bit depth, pixel size & save the image.
+                IJ = autoclass('ij.IJ')
+
+                # Set the pixel size. Fiji rounds 0.499 nm to 0.5 nm and I can't see anything I can do about that
+                pixel_size_nm = str(annotation_tiles[annotation_name]['pixel_size'] * 10e8)
+                pixel_size_command = "channels=1 slices=1 frames=1 unit=nm pixel_width=" + pixel_size_nm + \
+                                     " pixel_height=" + pixel_size_nm + " voxel_depth=1.0 global"
+                IJ.run(stitched_img, "Properties...", pixel_size_command)
+
+                # Convert to 8 bit
+                if eight_bit:
+                    IJ.run(stitched_img, "8-bit", "")
+
+                # Convert it to an ImageJ2 dataset. It was an imageJ1 ImagePlus before and the save function can't
+                # handle that. See: https://github.com/imagej/pyimagej/issues/35
+                stitched_img_dataset = self.ij.py.to_dataset(stitched_img)
+
+                output_filename = annotation_name + '.png'
+                self.ij.io().save(stitched_img_dataset, str(self.output_path / output_filename))
+
+                # TODO: Find a way to do improved memory management or reset the running instance, e.g.:
+                #  https://forum.image.sc/t/how-to-find-memory-leaks-in-plugins-what-needs-to-get-disposed/10211/12
+                # ij.getContext().dispose()
+                self.ij.window().clear()
+
+            else:
+                # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with
+                #  changed parameters or by putting the individual images in a folder so that they could be
+                #  stitched manually)
+                logging.warning('Not stitching fork {}, because the stitching calculations displaced the images more '
+                                'than {} pixels'.format(annotation_name, stitch_threshold))
 
         # return the annotation_tiles dictionary that now contains the information about whether a fork was stitched and
         # where the fork is in the stitched image
@@ -240,19 +258,19 @@ def main():
     # Paths
     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
     # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
-    # project_name = '8330_siNeg_CPT_3rd'
-    project_name = '8330_siXRCC3_CPT_3rd_2ul'
+    project_name = '8330_siNeg_CPT_3rd'
+    # project_name = '8330_siXRCC3_CPT_3rd_2ul'
     # project_name = '8373_3_siXRCC3_HU_1st_y1'
 
     # TODO: Make logging work on Windows
     # Logging
-    logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '_2.log'), level=logging.INFO,
+    logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '.log'), level=logging.INFO,
                         format='%(asctime)s %(message)s')
     logging.info('Processing experiment {}'.format(project_name))
 
     # Parameters
     stitch_radius = 1
-    batch_size = 5
+    batch_size = 50
     stitch_threshold = 2000
     highmag_layer = 'highmag'
     eight_bit = True
@@ -264,7 +282,7 @@ def main():
     stitcher = Stitcher(ij, highmag_layer, stitch_radius, base_path, project_name)
     stitcher.parse_create_csv_batches(batch_size=batch_size)
     stitcher.manage_batches(stitch_threshold, eight_bit)
-    stitcher.combine_csvs()
+    # stitcher.combine_csvs()
 
 
 if __name__ == "__main__":
