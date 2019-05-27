@@ -22,6 +22,9 @@ base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missin
                'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
                'list for ssDNA at junction (nt)']
 
+# ij = imagej.init('/Applications/Fiji.app')
+# ij = imagej.init('C:\\Program Files\\Fiji')
+
 
 def stitch_batch(annotation_csv, output_path, pixel_size, stitch_radius):
     csv_stitched_path = annotation_csv[:-4] + '_stitched.csv'
@@ -55,6 +58,7 @@ def main():
                         format='%(asctime)s %(message)s')
     logging.info('Processing experiment {}'.format(project_name))
 
+
     # Make folders for stitched Forks
     output_folder = 'stitchedForks'
     output_path = Path(project_folder_path) / Path(output_folder)
@@ -67,6 +71,7 @@ def main():
 
     parser = sites_of_interest_parser.MapsXmlParser(project_folder=project_folder_path, use_unregistered_pos=True,
                                                     name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
+
 
     # Populate annotation_csv_list by looking at csv files in directory
     items = os.listdir(csv_base_path)
@@ -83,6 +88,7 @@ def main():
 
         pool.close()
         pool.join()
+
 
 
     # TODO: Fuse the csv files of the stitched forks into a single csv file
