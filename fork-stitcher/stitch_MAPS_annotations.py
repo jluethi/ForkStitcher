@@ -196,7 +196,7 @@ class Stitcher:
         stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded,
                                                                 stitch_threshold=stitch_threshold,
                                                                 eight_bit=eight_bit)
-        csv_stitched_path = annotation_csv_path[:-4] + '_stitched.csv'
+        csv_stitched_path = str(annotation_csv_path)[:-4] + '_stitched.csv'
 
         sip.save_annotation_tiles_to_csv(stitched_annotation_tiles, self.base_header, csv_stitched_path)
         os.remove(annotation_csv_path)
@@ -212,6 +212,16 @@ class Stitcher:
 
         for annotation_csv_path in annotation_csv_list:
             self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit)
+
+    def combine_csvs(self):
+        items = os.listdir(self.csv_base_path)
+        stitched_csvs = []
+        for name in items:
+            if name.endswith('_stitched.csv'):
+                stitched_csvs.append(name)
+
+        stitched_csvs.sort()
+
 
 
 def main():

@@ -623,7 +623,7 @@ def save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_
                 current_annotation_pd.to_csv(f, header=False, index=False)
         else:
             current_batch = int(i/batch_size)
-            csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(current_batch)
+            csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(f'{current_batch:05}')
             with open(str(csv_batch_path), 'a') as f:
                 current_annotation_pd.to_csv(f, header=False, index=False)
 
