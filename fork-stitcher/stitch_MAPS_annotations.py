@@ -75,6 +75,12 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             StitchingUtils = autoclass('ch.fmi.visiview.StitchingUtils')
             models = StitchingUtils.computeStitching(java_imgs, positions_jlist, dimensionality, computeOverlap)
 
+            # Array = autoclass('java.lang.reflect.Array')
+            # Double = autoclass('java.lang.Double')
+            # params = Array.newInstance(Double.TYPE, 6)
+            # params = [0.0] * 6
+            # models.toArray(ij.py.to_java(params))
+            # print(params)
             # TODO: Get Stitching parameters out of models
             # translation_model = autoclass('ij.mpicbg.trakem2.transform')
 
@@ -82,22 +88,12 @@ def stitch_annotated_tiles(annotation_tiles: dict, output_path: Path, pixel_size
             # print(model_results)
 
             # TODO: Fuse by Overlap, not linear fusion
-            stitched_img = StitchingUtils.fuseTiles(java_imgs, models, dimensionality)
-
-            # # Potentially: Test if 'Save computation time (but use more RAM)' option speeds up the stitching
-            # plugin = 'Grid/Collection stitching'
-            # index_x = int(center_filename[9:12]) - stitch_radius
-            # index_y = int(center_filename[5:8]) - stitch_radius
-            # args = {'type': '[Filename defined position]', 'order': '[Defined by filename         ]',
-            #         'grid_size_x': '3', 'grid_size_y': '3', 'tile_overlap': '8', 'first_file_index_x': str(index_x),
-            #         'first_file_index_y': str(index_y), 'directory': img_path,
-            #         'file_names': 'Tile_{yyy}-{xxx}-000000_0-000.tif', 'output_textfile_name': 'TileConfiguration.txt',
-            #         'fusion_method': '[Intensity of random input tile]', 'regression_threshold': '0.15',
-            #         'max/avg_displacement_threshold': '0.20', 'absolute_displacement_threshold': '0.30',
-            #         'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
-            #         'image_output': '[Fuse and display]'}
-            # ij.py.run_plugin(plugin, args)
-
+            Fusion = autoclass('mpicbg.stitching.fusion.Fusion')
+            UnsignedShortType = autoclass('net.imglib2.type.numeric.integer.UnsignedShortType')
+            target_type = UnsignedShortType()
+            subpixel_accuracy = False
+            ignoreZeroValues = False
+            stitched_img = Fusion.fuse(target_type, java_imgs, models, dimensionality, subpixel_accuracy, 5, None, False, ignoreZeroValues, False)
 
             # # Use imageJ to set bit depth, pixel size & save the image.
             # from jnius import autoclass
@@ -175,60 +171,59 @@ def check_stitching_result(stitching_config, annotation_coordinates):
 
 
 
-# def main():
-    # # Headers of the categorization & the measurements for forks. Values filled in by users afterwards
-    # base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missing Link Fork',
-    #                'fork symetric', 'fork asymetric', 'reversed fork symetric', 'reversed fork asymetric',
-    #                'size reversed fork (nm)', 'dsDNA RF', 'internal ssDNA RF', 'ssDNA end RF',
-    #                'total ssDNA RF	gaps',
-    #                'gaps', 'sister	gaps', 'parental', 'size gaps (nm)', 'junction ssDNA size (nm)',
-    #                'hemicatenane', 'termination intermediate', 'bubble', 'hemireplicated bubble',
-    #                'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
-    #                'list for ssDNA at junction (nt)']
-    #
-    # base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
-    # # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
-    # project_name = '8330_siNeg_CPT_3rd'
-    # # project_name = '8330_siXRCC3_CPT_3rd_2ul'
-    # # project_name = '8373_3_siXRCC3_HU_1st_y1'
-    # project_folder_path = os.path.join(base_path + project_name)
-    # logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '_2.log'), level=logging.INFO,
-    #                     format='%(asctime)s %(message)s')
-    # logging.info('Processing experiment {}'.format(project_name))
-    # # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects//'
-    # stitch_radius = 1
-    # batch_size = 20
-    #
-    # # Check if a folder for the stitched forks already exists. If not, create that folder
-    # output_folder = 'stitchedForks-test'
-    # output_path = Path(project_folder_path) / Path(output_folder)
-    #
-    # os.makedirs(str(output_path), exist_ok=True)
-    #
-    # highmag_layer = 'highmag'
-    #
-    # # csv_path = os.path.join(base_path, project_name + '_annotations' + '.csv')
-    # csv_path = '/Users/Joel/Desktop/test_annotations.csv'
-    #
-    # parser = sites_of_interest_parser.MapsXmlParser(project_folder=project_folder_path, use_unregistered_pos=True,
-    #                                                 name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
-    # annotation_tiles = parser.parse_xml()
-    # annotation_csvs = sites_of_interest_parser.save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_size=batch_size)
-    #
-    # for annotation_csv in annotation_csvs:
-    #     annotation_tiles_loaded = sites_of_interest_parser.load_annotations_from_csv(base_header, annotation_csv)
-    #     print(annotation_tiles_loaded)
-    #
-    #     stitched_annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles, output_path=output_path,
-    #                                               pixel_size=parser.pixel_size, stitch_radius=stitch_radius,
-    #                                               eight_bit=True)
+def main():
+    # Headers of the categorization & the measurements for forks. Values filled in by users afterwards
+    base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missing Link Fork',
+                   'fork symetric', 'fork asymetric', 'reversed fork symetric', 'reversed fork asymetric',
+                   'size reversed fork (nm)', 'dsDNA RF', 'internal ssDNA RF', 'ssDNA end RF',
+                   'total ssDNA RF	gaps',
+                   'gaps', 'sister	gaps', 'parental', 'size gaps (nm)', 'junction ssDNA size (nm)',
+                   'hemicatenane', 'termination intermediate', 'bubble', 'hemireplicated bubble',
+                   'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
+                   'list for ssDNA at junction (nt)']
 
-        #
+    base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
+    # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
+    project_name = '8330_siNeg_CPT_3rd'
+    # project_name = '8330_siXRCC3_CPT_3rd_2ul'
+    # project_name = '8373_3_siXRCC3_HU_1st_y1'
+    project_folder_path = os.path.join(base_path + project_name)
+    logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '_2.log'), level=logging.INFO,
+                        format='%(asctime)s %(message)s')
+    logging.info('Processing experiment {}'.format(project_name))
+    # project_folder_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects//'
+    stitch_radius = 1
+    batch_size = 20
+
+    # Check if a folder for the stitched forks already exists. If not, create that folder
+    output_folder = 'stitchedForks-test'
+    output_path = Path(project_folder_path) / Path(output_folder)
+
+    os.makedirs(str(output_path), exist_ok=True)
+
+    highmag_layer = 'highmag'
+
+    # csv_path = os.path.join(base_path, project_name + '_annotations' + '.csv')
+    csv_path = '/Users/Joel/Desktop/test_annotations.csv'
+
+    parser = sites_of_interest_parser.MapsXmlParser(project_folder=project_folder_path, use_unregistered_pos=True,
+                                                    name_of_highmag_layer=highmag_layer, stitch_radius=stitch_radius)
+    annotation_tiles = parser.parse_xml()
+    annotation_csvs = sites_of_interest_parser.save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_size=batch_size)
+
+    for annotation_csv in annotation_csvs:
+        annotation_tiles_loaded = sites_of_interest_parser.load_annotations_from_csv(base_header, annotation_csv)
+
+        stitched_annotation_tiles = stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded, output_path=output_path,
+                                                  pixel_size=parser.pixel_size, stitch_radius=stitch_radius,
+                                                  eight_bit=True)
+
+
         # csv_stitched_path = '/Users/Joel/Desktop/test_annotations.csv'
-        # parser.save_annotation_tiles_to_csv(stitched_annotation_tiles, base_header, csv_stitched_path, batch_size=batch_size)
+        # sites_of_interest_parser.save_annotation_tiles_to_csv(stitched_annotation_tiles, base_header, csv_stitched_path, batch_size=batch_size)
 
 
 
-#
-# if __name__ == "__main__":
-#     main()
+
+if __name__ == "__main__":
+    main()
