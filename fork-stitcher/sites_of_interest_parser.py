@@ -492,6 +492,7 @@ class MapsXmlParser:
 
             if quadratic_distance[tile_index] < distance_threshold:
                 self.annotation_tiles[annotation_name] = current_tile
+                self.annotation_tiles[annotation_name]['pixel_size'] = self.pixel_size
                 self.annotation_tiles[annotation_name]['Annotation_StagePosition_x'] = \
                     self.annotations[annotation_name]['StagePosition_x']
                 self.annotation_tiles[annotation_name]['Annotation_StagePosition_y'] = \
@@ -594,12 +595,12 @@ def save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_
     header_addition = list(list(annotation_tiles.values())[0].keys())
     if batch_size == 0:
         csv_header = pd.DataFrame(columns=base_header_2 + header_addition)
-        csv_header.to_csv(csv_path, index=False)
-        csv_files.append(csv_path)
+        csv_header.to_csv(str(csv_path), index=False)
+        csv_files.append(str(csv_path))
     else:
         nb_batches = int(math.ceil(len(annotation_tiles.keys()) / batch_size))
         for j in range(nb_batches):
-            csv_batch_path = csv_path[:-4] + '_{}.csv'.format(j)
+            csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(j)
             csv_header = pd.DataFrame(columns=base_header_2 + header_addition)
             csv_header.to_csv(csv_batch_path, index=False)
             csv_files.append(csv_batch_path)
@@ -622,7 +623,7 @@ def save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_
                 current_annotation_pd.to_csv(f, header=False, index=False)
         else:
             current_batch = int(i/batch_size)
-            csv_batch_path = csv_path[:-4] + '_{}.csv'.format(current_batch)
+            csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(current_batch)
             with open(str(csv_batch_path), 'a') as f:
                 current_annotation_pd.to_csv(f, header=False, index=False)
 
@@ -644,7 +645,7 @@ def load_annotations_from_csv(base_header, csv_path):
 
     """
     annotation_tiles = {}
-    annotation_dataframe = pd.read_csv(csv_path)
+    annotation_dataframe = pd.read_csv(str(csv_path))
     column_names = list(annotation_dataframe.columns.values)
     # Loop through all the rows of the dataframe, add them one by one to the annotation tiles
     for index, row in annotation_dataframe.iterrows():
