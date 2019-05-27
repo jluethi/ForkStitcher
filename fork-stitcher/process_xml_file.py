@@ -20,8 +20,8 @@ def main():
     # Variables that change
     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
     # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
-    # project_name = '8330_siNeg_CPT_3rd'
-    project_name = '8330_siXRCC3_CPT_3rd_2ul'
+    project_name = '8330_siNeg_CPT_3rd'
+    # project_name = '8330_siXRCC3_CPT_3rd_2ul'
     # project_name = '8373_3_siXRCC3_HU_1st_y1'
     batch_size = 5
 

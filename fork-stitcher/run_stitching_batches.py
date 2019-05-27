@@ -9,8 +9,8 @@ import imagej
 import sites_of_interest_parser
 import stitch_MAPS_annotations
 
-# ij = imagej.init('/Applications/Fiji.app')
-ij = imagej.init('C:\\Program Files\\Fiji')
+ij = imagej.init('/Applications/Fiji.app')
+# ij = imagej.init('C:\\Program Files\\Fiji')
 
 # Headers of the categorization & the measurements for forks. Values filled in by users afterwards
 base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missing Link Fork',
@@ -24,14 +24,14 @@ base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missin
 
 
 def stitch_batch(annotation_csv, output_path, pixel_size, stitch_radius):
+    csv_stitched_path = annotation_csv[:-4] + '_stitched.csv'
     annotation_tiles_loaded = sites_of_interest_parser.load_annotations_from_csv(base_header, annotation_csv)
+
     stitched_annotation_tiles = stitch_MAPS_annotations.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded,
                                                                                output_path=output_path,
                                                                                pixel_size=pixel_size, ij=ij,
                                                                                stitch_radius=stitch_radius,
                                                                                eight_bit=True)
-
-    csv_stitched_path = annotation_csv[:-4] + '_stitched.csv'
 
     sites_of_interest_parser.save_annotation_tiles_to_csv(stitched_annotation_tiles, base_header, csv_stitched_path)
     os.remove(annotation_csv)
@@ -41,8 +41,8 @@ def main():
     # Variables that change
     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
     # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
-    # project_name = '8330_siNeg_CPT_3rd'
-    project_name = '8330_siXRCC3_CPT_3rd_2ul'
+    project_name = '8330_siNeg_CPT_3rd'
+    # project_name = '8330_siXRCC3_CPT_3rd_2ul'
     # project_name = '8373_3_siXRCC3_HU_1st_y1'
 
     # Constant variables
