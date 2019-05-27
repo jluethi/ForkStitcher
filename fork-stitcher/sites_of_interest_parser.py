@@ -600,7 +600,7 @@ def save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_
     else:
         nb_batches = int(math.ceil(len(annotation_tiles.keys()) / batch_size))
         for j in range(nb_batches):
-            csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(j)
+            csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(f'{j:05}')
             csv_header = pd.DataFrame(columns=base_header_2 + header_addition)
             csv_header.to_csv(csv_batch_path, index=False)
             csv_files.append(csv_batch_path)
