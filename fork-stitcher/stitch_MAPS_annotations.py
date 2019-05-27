@@ -55,6 +55,7 @@ class Stitcher:
                 image_plus_class = autoclass('ij.ImagePlus')
                 imps = []
 
+                # TODO: Test if converting to 8bit when loading improves overall performance
                 for neighbor in annotation_tiles[annotation_name]['surrounding_tile_names']:
                     print(neighbor)
                     imagej2_img = self.ij.io().open(str(img_path / neighbor))
@@ -213,7 +214,7 @@ class Stitcher:
         for annotation_csv_path in annotation_csv_list:
             self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit)
 
-    def combine_csvs(self):
+    def combine_csvs(self, delete_batches=False):
         items = os.listdir(self.csv_base_path)
         stitched_csvs = []
         for name in items:
@@ -221,17 +222,29 @@ class Stitcher:
                 stitched_csvs.append(name)
 
         stitched_csvs.sort()
+        annotation_tiles = {}
+        for csv in stitched_csvs:
+            current_tiles = sip.load_annotations_from_csv(self.base_header, self.csv_base_path / csv)
+            for key in current_tiles:
+                annotation_tiles[key] = current_tiles[key]
+        csv_output_path = self.csv_base_path / (self.project_name + '_fused' + '.csv')
+        sip.save_annotation_tiles_to_csv(annotation_tiles, self.base_header, csv_output_path)
 
+        # Delete all the batch files if the option is set for it
+        if delete_batches:
+            for name in items:
+                os.remove(self.csv_base_path / name)
 
 
 def main():
     # Paths
     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
     # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
-    project_name = '8330_siNeg_CPT_3rd'
-    # project_name = '8330_siXRCC3_CPT_3rd_2ul'
+    # project_name = '8330_siNeg_CPT_3rd'
+    project_name = '8330_siXRCC3_CPT_3rd_2ul'
     # project_name = '8373_3_siXRCC3_HU_1st_y1'
 
+    # TODO: Make logging work on Windows
     # Logging
     logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '_2.log'), level=logging.INFO,
                         format='%(asctime)s %(message)s')
@@ -251,6 +264,7 @@ def main():
     stitcher = Stitcher(ij, highmag_layer, stitch_radius, base_path, project_name)
     stitcher.parse_create_csv_batches(batch_size=batch_size)
     stitcher.manage_batches(stitch_threshold, eight_bit)
+    stitcher.combine_csvs()
 
 
 if __name__ == "__main__":
