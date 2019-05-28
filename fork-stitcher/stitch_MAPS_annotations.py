@@ -185,10 +185,8 @@ class Stitcher:
                 output_filename = annotation_name + '.png'
                 self.ij.io().save(stitched_img_dataset, str(self.output_path / output_filename))
 
-                # TODO: Find a way to do improved memory management or reset the running instance, e.g.:
-                #  https://forum.image.sc/t/how-to-find-memory-leaks-in-plugins-what-needs-to-get-disposed/10211/12
-                # ij.getContext().dispose()
-                self.ij.window().clear()
+                # stitched_img_dataset.delete()
+                stitched_img.close()
 
             else:
                 # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with
@@ -196,6 +194,14 @@ class Stitcher:
                 #  stitched manually)
                 logging.warning('Not stitching fork {}, because the stitching calculations displaced the images more '
                                 'than {} pixels'.format(annotation_name, stitch_threshold))
+
+            # Close any open images to free up RAM. Otherwise, get an OutOfMemory Exception after a few rounds
+            # ij.getContext().dispose()
+            for img in imps:
+                img.close()
+            for java_img in java_imgs:
+                java_img.close()
+            self.ij.window().clear()
 
         # return the annotation_tiles dictionary that now contains the information about whether a fork was stitched and
         # where the fork is in the stitched image
@@ -308,10 +314,11 @@ def main():
 
     # Initialize ImageJ VM
     ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
+    # TODO: Put away ImageJ print spam to keep console cleaner
 
     # Parse and save the metadata
     stitcher = Stitcher(ij, highmag_layer, stitch_radius, base_path, project_name)
-    # stitcher.parse_create_csv_batches(batch_size=batch_size)
+    stitcher.parse_create_csv_batches(batch_size=batch_size)
     stitcher.manage_batches(stitch_threshold, eight_bit)
     # stitcher.combine_csvs()
 
