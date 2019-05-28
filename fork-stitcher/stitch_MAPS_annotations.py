@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 import re
 import numpy as np
+from multiprocessing import Pool
 
 import sites_of_interest_parser as sip
 import os
@@ -13,8 +14,7 @@ import imagej
 
 
 class Stitcher:
-    def __init__(self, ij, highmag_layer, stitch_radius, base_path, project_name):
-        self.ij = ij
+    def __init__(self, highmag_layer, stitch_radius, base_path, project_name):
         self.highmag_layer = highmag_layer
         self.stitch_radius = stitch_radius
 
@@ -240,6 +240,7 @@ class Stitcher:
 
     def stitch_batch(self, annotation_csv_path, stitch_threshold, eight_bit):
         # Check if a folder for the stitched forks already exists. If not, create that folder
+        print('Stitching')
         os.makedirs(str(self.output_path), exist_ok=True)
         annotation_tiles_loaded = sip.MapsXmlParser.load_annotations_from_csv(self.base_header, annotation_csv_path)
 
@@ -251,7 +252,10 @@ class Stitcher:
         sip.MapsXmlParser.save_annotation_tiles_to_csv(stitched_annotation_tiles, self.base_header, csv_stitched_path)
         os.remove(annotation_csv_path)
 
-    def manage_batches(self, stitch_threshold, eight_bit):
+    def test(self, string, b, c, ij):
+        print(string)
+
+    def manage_batches(self, stitch_threshold, eight_bit, max_processes, ij):
         # Populate annotation_csv_list by looking at csv files in directory
         items = os.listdir(self.csv_base_path)
         annotation_csv_list = []
@@ -259,9 +263,15 @@ class Stitcher:
         for name in items:
             if regex.search(name):
                 annotation_csv_list.append(self.csv_base_path / name)
+        print('Managing')
+        with Pool(processes=max_processes) as pool:
+            for annotation_csv_path in annotation_csv_list:
+                print('Preparing to stitch')
+                pool.apply_async(self.test, args=(annotation_csv_path, stitch_threshold, eight_bit, ij, ))
+                # pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit,))
 
-        for annotation_csv_path in annotation_csv_list:
-            self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit)
+            pool.close()
+            pool.join()
 
     def combine_csvs(self, delete_batches=False):
         items = os.listdir(self.csv_base_path)
@@ -305,14 +315,15 @@ def main():
     stitch_threshold = 2000
     highmag_layer = 'highmag'
     eight_bit = True
+    max_processes = 2
 
     # Initialize ImageJ VM
     ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
 
     # Parse and save the metadata
-    stitcher = Stitcher(ij, highmag_layer, stitch_radius, base_path, project_name)
-    # stitcher.parse_create_csv_batches(batch_size=batch_size)
-    stitcher.manage_batches(stitch_threshold, eight_bit)
+    stitcher = Stitcher(highmag_layer, stitch_radius, base_path, project_name)
+    stitcher.parse_create_csv_batches(batch_size=batch_size)
+    stitcher.manage_batches(stitch_threshold, eight_bit, max_processes=max_processes, ij=ij)
     # stitcher.combine_csvs()
 
 
