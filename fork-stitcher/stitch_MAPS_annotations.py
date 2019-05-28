@@ -11,6 +11,7 @@ import imagej
 # ij = imagej.init('/Applications/Fiji.app')
 # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
 
+
 class Stitcher:
     def __init__(self, ij, highmag_layer, stitch_radius, base_path, project_name):
         self.ij = ij
@@ -36,8 +37,8 @@ class Stitcher:
                             ]
 
     def stitch_annotated_tiles(self, annotation_tiles: dict, stitch_threshold, eight_bit: bool = False):
-        # This function takes the parser object containing all the information about the MAPS project and its annotations.
-        # It performs the stitching.
+        # This function takes the parser object containing all the information about the MAPS project and its
+        # annotations. It performs the stitching.
 
         for annotation_name in annotation_tiles:
             number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
@@ -200,7 +201,8 @@ class Stitcher:
         # where the fork is in the stitched image
         return annotation_tiles
 
-    def process_stitching_params(self, stitch_params, annotation_coordinates, stitch_threshold, original_positions,
+    @staticmethod
+    def process_stitching_params(stitch_params, annotation_coordinates, stitch_threshold, original_positions,
                                  center_index):
         nb_imgs = len(stitch_params)
         stitch_coordinates = np.zeros((nb_imgs, 2))
@@ -231,7 +233,7 @@ class Stitcher:
                                    name_of_highmag_layer=self.highmag_layer, stitch_radius=self.stitch_radius)
 
         annotation_tiles = parser.parse_xml()
-        annotation_csvs = sip.save_annotation_tiles_to_csv(annotation_tiles, self.base_header, csv_path,
+        annotation_csvs = sip.MapsXmlParser.save_annotation_tiles_to_csv(annotation_tiles, self.base_header, csv_path,
                                                            batch_size=batch_size)
 
         return [annotation_tiles, annotation_csvs]
@@ -239,14 +241,14 @@ class Stitcher:
     def stitch_batch(self, annotation_csv_path, stitch_threshold, eight_bit):
         # Check if a folder for the stitched forks already exists. If not, create that folder
         os.makedirs(str(self.output_path), exist_ok=True)
-        annotation_tiles_loaded = sip.load_annotations_from_csv(self.base_header, annotation_csv_path)
+        annotation_tiles_loaded = sip.MapsXmlParser.load_annotations_from_csv(self.base_header, annotation_csv_path)
 
         stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded,
                                                                 stitch_threshold=stitch_threshold,
                                                                 eight_bit=eight_bit)
         csv_stitched_path = str(annotation_csv_path)[:-4] + '_stitched.csv'
 
-        sip.save_annotation_tiles_to_csv(stitched_annotation_tiles, self.base_header, csv_stitched_path)
+        sip.MapsXmlParser.save_annotation_tiles_to_csv(stitched_annotation_tiles, self.base_header, csv_stitched_path)
         os.remove(annotation_csv_path)
 
     def manage_batches(self, stitch_threshold, eight_bit):
@@ -271,11 +273,11 @@ class Stitcher:
         stitched_csvs.sort()
         annotation_tiles = {}
         for csv in stitched_csvs:
-            current_tiles = sip.load_annotations_from_csv(self.base_header, self.csv_base_path / csv)
+            current_tiles = sip.MapsXmlParser.load_annotations_from_csv(self.base_header, self.csv_base_path / csv)
             for key in current_tiles:
                 annotation_tiles[key] = current_tiles[key]
         csv_output_path = self.csv_base_path / (self.project_name + '_fused' + '.csv')
-        sip.save_annotation_tiles_to_csv(annotation_tiles, self.base_header, csv_output_path)
+        sip.MapsXmlParser.save_annotation_tiles_to_csv(annotation_tiles, self.base_header, csv_output_path)
 
         # Delete all the batch files if the option is set for it
         if delete_batches:
@@ -299,7 +301,7 @@ def main():
 
     # Parameters
     stitch_radius = 1
-    batch_size = 1
+    batch_size = 5
     stitch_threshold = 2000
     highmag_layer = 'highmag'
     eight_bit = True
