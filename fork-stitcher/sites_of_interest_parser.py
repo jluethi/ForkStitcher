@@ -659,7 +659,7 @@ def load_annotations_from_csv(base_header, csv_path):
                     content_list = row[column].strip('[]').split(',')
                     annotation_tiles[row['Image']][column] = content_list
                 elif column == 'surrounding_tile_exists':
-                    content_list = [bool(i) for i in row[column].strip('[]').split(',')]
+                    content_list = [i == 'True' for i in row[column].strip('[]').split(',')]
                     annotation_tiles[row['Image']][column] = content_list
                 elif column == 'img_path':
                     annotation_tiles[row['Image']][column] = Path(row[column])
