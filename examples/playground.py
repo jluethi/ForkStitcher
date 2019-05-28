@@ -31,23 +31,22 @@ import numpy as np
 
 from multiprocessing import Pool
 import imagej
+ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10')
+
 
 class Test:
-    def f(self, i, ij):
+    def f(self, i):
         print(i)
 
-    def run(self, ij):
+    def run(self):
         print('Running')
         with Pool(processes=4) as pool:
             for i in range(10):
-                pool.apply_async(self.f, args=(i, ij,))
+                pool.apply_async(self.f, args=(i, ))
 
             pool.close()
             pool.join()
 
-# ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10')
-ij = 1
-
 test = Test()
-test.run(ij)
+test.run()
 
