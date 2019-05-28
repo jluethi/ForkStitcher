@@ -41,6 +41,7 @@ class Stitcher:
 
         for annotation_name in annotation_tiles:
             number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
+
             # If the image files for the 8 neighbors and the tile exist, stitch the images
 
             logging.info('Stitching {}'.format(annotation_name))
@@ -67,26 +68,54 @@ class Stitcher:
 
             positions_jlist = self.ij.py.to_java([])
             # All tiles exist
-            if sum(annotation_tiles[annotation_name]['surrounding_tile_exists']) == 9:
+            if number_existing_neighbor_tiles == 9:
                 positions = [[0.0, 0.0], [3686.0, 0.0], [7373.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0],
                              [7373.0, 3686.0], [0.0, 7373.0], [3686.0, 7373.0], [7373.0, 7373.0]]
+                center_index = 4
             # Edge tile: Top or bottom row is missing
             elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [True, True, True, True, True, True,
-                                                                                  False, False, False] \
-                    or annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, False, False, True, True,
-                                                                                        True, True, True, True]:
+                                                                                  False, False, False]:
                 positions = [[0.0, 0.0], [3686.0, 0.0], [7373.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0],
                              [7373.0, 3686.0]]
+                center_index = 4
+            elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, False, False, True, True,
+                                                                                True, True, True, True]:
+                positions = [[0.0, 0.0], [3686.0, 0.0], [7373.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0],
+                             [7373.0, 3686.0]]
+                center_index = 1
             # Edge tile: Left or right column is missing
             elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, True, True, False, True, True,
-                                                                                  False, True, True] \
-                    or annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, True, True, False, True,
-                                                                                        True, False, True, True]:
+                                                                                  False, True, True]:
                 positions = [[0.0, 0.0], [3686.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0], [0.0, 7373.0],
                              [3686.0, 7373.0]]
+                center_index = 2
+            elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [True, True, False, True, True,
+                                                                                False, True, True, False]:
+                positions = [[0.0, 0.0], [3686.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0], [0.0, 7373.0],
+                             [3686.0, 7373.0]]
+                center_index = 3
             # Corner Tile: Only 2x2 tiles to stitch
-            elif sum(annotation_tiles[annotation_name]['surrounding_tile_exists']) == 4:
+            elif number_existing_neighbor_tiles == 4:
                 positions = [[0.0, 0.0], [3686.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0]]
+                if annotation_tiles[annotation_name]['surrounding_tile_exists'] == [True, True, False, True, True, False,
+                                                                                    False, False, False]:
+                    center_index = 3
+                elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, True, True, False, True,
+                                                                                      True, False, False, False]:
+                    center_index = 2
+                elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, False, False, True, True,
+                                                                                      False, True, True, False]:
+                    center_index = 1
+                elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, False, False, False, True,
+                                                                                      True, False, True, True]:
+                    center_index = 0
+                else:
+                    logging.warning('Not stitching fork {}, because there is no rectangle of images to stitch. '
+                                    'This stitching function is only made for 3x3, 2x3, 3x2 and 2x2 stitching. '
+                                    'Those tiles do exist: {}'.format(annotation_name,
+                                                                      annotation_tiles[annotation_name]
+                                                                      ['surrounding_tile_exists']))
+                    break
 
             else:
                 logging.warning('Not stitching fork {}, because there is no rectangle of images to stitch. '
@@ -118,7 +147,7 @@ class Stitcher:
             [perform_stitching, stitched_coordinates] = self.process_stitching_params(stitching_params,
                                                                                       original_annotation_coord,
                                                                                       stitch_threshold,
-                                                                                      original_positions)
+                                                                                      original_positions, center_index)
 
             # If the calculate stitching is reasonable, perform the stitching. Otherwise, log a warning
             if perform_stitching:
@@ -171,15 +200,15 @@ class Stitcher:
         # where the fork is in the stitched image
         return annotation_tiles
 
-
-    def process_stitching_params(self, stitch_params, annotation_coordinates, stitch_threshold, original_positions):
+    def process_stitching_params(self, stitch_params, annotation_coordinates, stitch_threshold, original_positions,
+                                 center_index):
         nb_imgs = len(stitch_params)
         stitch_coordinates = np.zeros((nb_imgs, 2))
         for i, coordinates in enumerate(stitch_params):
             stitch_coordinates[i, 0] = int(round(coordinates[0]))
             stitch_coordinates[i, 1] = int(round(coordinates[1]))
         min_coords = np.min(stitch_coordinates, axis=0)
-        stitched_annotation_coordinates = annotation_coordinates + stitch_coordinates[4, :] - min_coords
+        stitched_annotation_coordinates = annotation_coordinates + stitch_coordinates[center_index, :] - min_coords
 
         stitch_shift = stitch_coordinates - original_positions
         max_shift = np.max(stitch_shift)
@@ -270,7 +299,7 @@ def main():
 
     # Parameters
     stitch_radius = 1
-    batch_size = 50
+    batch_size = 1
     stitch_threshold = 2000
     highmag_layer = 'highmag'
     eight_bit = True
@@ -280,7 +309,7 @@ def main():
 
     # Parse and save the metadata
     stitcher = Stitcher(ij, highmag_layer, stitch_radius, base_path, project_name)
-    stitcher.parse_create_csv_batches(batch_size=batch_size)
+    # stitcher.parse_create_csv_batches(batch_size=batch_size)
     stitcher.manage_batches(stitch_threshold, eight_bit)
     # stitcher.combine_csvs()
 

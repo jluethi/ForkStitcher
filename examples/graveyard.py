@@ -83,6 +83,31 @@
 # System.out.println('Hello world')
 
 
+######### Stitching via ImageJ1 plugin call
+# center_filename = annotation_tiles[annotation_name]['filename']
+# plugin = 'Grid/Collection stitching'
+# index_x = int(center_filename[9:12]) - stitch_radius
+# index_y = int(center_filename[5:8]) - stitch_radius
+# args = {'type': '[Filename defined position]', 'order': '[Defined by filename         ]',
+#         'grid_size_x': '3', 'grid_size_y': '3', 'tile_overlap': '8', 'first_file_index_x': str(index_x),
+#         'first_file_index_y': str(index_y), 'directory': img_path,
+#         'file_names': 'Tile_{yyy}-{xxx}-000000_0-000.tif', 'output_textfile_name': 'TileConfiguration.txt',
+#         'fusion_method': '[Intensity of random input tile]', 'regression_threshold': '0.15',
+#         'max/avg_displacement_threshold': '0.20', 'absolute_displacement_threshold': '0.30',
+#         'compute_overlap': True, 'computation_parameters': '[Save memory (but be slower)]',
+#         'image_output': '[Fuse and display]'}
+# ij.py.run_plugin(plugin, args)
+#
+# # Use imageJ to set bit depth, pixel size & save the image.
+# from jnius import autoclass
+# IJ = autoclass('ij.IJ')
+#
+# # Get the open window with the stitched image
+# WindowManager = autoclass('ij.WindowManager')
+# stitched_img = WindowManager.getCurrentImage()
+
+
+
 
 
 
