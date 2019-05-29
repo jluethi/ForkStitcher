@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 import re
 import numpy as np
+from multiprocessing import Pool
 
 import sites_of_interest_parser as sip
 import os
@@ -9,12 +10,11 @@ import os
 import imagej
 
 # ij = imagej.init('/Applications/Fiji.app')
-# ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
+ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
 
 
 class Stitcher:
-    def __init__(self, ij, highmag_layer, stitch_radius, base_path, project_name):
-        self.ij = ij
+    def __init__(self, highmag_layer, stitch_radius, base_path, project_name):
         self.highmag_layer = highmag_layer
         self.stitch_radius = stitch_radius
 
@@ -61,13 +61,13 @@ class Stitcher:
             for i, neighbor in enumerate(annotation_tiles[annotation_name]['surrounding_tile_names']):
                 if annotation_tiles[annotation_name]['surrounding_tile_exists'][i]:
                     print(neighbor)
-                    imagej2_img = self.ij.io().open(str(img_path / neighbor))
-                    imps.append(self.ij.convert().convert(imagej2_img, image_plus_class))
+                    imagej2_img = ij.io().open(str(img_path / neighbor))
+                    imps.append(ij.convert().convert(imagej2_img, image_plus_class))
 
-            java_imgs = self.ij.py.to_java(imps)
+            java_imgs = ij.py.to_java(imps)
             # Define starting positions based on what neighbor tiles exist
 
-            positions_jlist = self.ij.py.to_java([])
+            positions_jlist = ij.py.to_java([])
             # All tiles exist
             if number_existing_neighbor_tiles == 9:
                 positions = [[0.0, 0.0], [3686.0, 0.0], [7373.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0],
@@ -180,12 +180,11 @@ class Stitcher:
 
                 # Convert it to an ImageJ2 dataset. It was an imageJ1 ImagePlus before and the save function can't
                 # handle that. See: https://github.com/imagej/pyimagej/issues/35
-                stitched_img_dataset = self.ij.py.to_dataset(stitched_img)
+                stitched_img_dataset = ij.py.to_dataset(stitched_img)
 
                 output_filename = annotation_name + '.png'
-                self.ij.io().save(stitched_img_dataset, str(self.output_path / output_filename))
+                ij.io().save(stitched_img_dataset, str(self.output_path / output_filename))
 
-                # stitched_img_dataset.delete()
                 stitched_img.close()
 
             else:
@@ -195,13 +194,14 @@ class Stitcher:
                 logging.warning('Not stitching fork {}, because the stitching calculations displaced the images more '
                                 'than {} pixels'.format(annotation_name, stitch_threshold))
 
+
             # Close any open images to free up RAM. Otherwise, get an OutOfMemory Exception after a few rounds
             # ij.getContext().dispose()
             for img in imps:
                 img.close()
             for java_img in java_imgs:
                 java_img.close()
-            self.ij.window().clear()
+            ij.window().clear()
 
         # return the annotation_tiles dictionary that now contains the information about whether a fork was stitched and
         # where the fork is in the stitched image
@@ -257,7 +257,10 @@ class Stitcher:
         sip.MapsXmlParser.save_annotation_tiles_to_csv(stitched_annotation_tiles, self.base_header, csv_stitched_path)
         os.remove(annotation_csv_path)
 
-    def manage_batches(self, stitch_threshold, eight_bit):
+    # def test(self, string, b, c, ):
+    #     print(string)
+
+    def manage_batches(self, stitch_threshold, eight_bit, max_processes):
         # Populate annotation_csv_list by looking at csv files in directory
         items = os.listdir(self.csv_base_path)
         annotation_csv_list = []
@@ -265,9 +268,13 @@ class Stitcher:
         for name in items:
             if regex.search(name):
                 annotation_csv_list.append(self.csv_base_path / name)
+        with Pool(processes=max_processes) as pool:
+            for annotation_csv_path in annotation_csv_list:
+                pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit, ))
+                # pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit,))
 
-        for annotation_csv_path in annotation_csv_list:
-            self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit)
+            pool.close()
+            pool.join()
 
     def combine_csvs(self, delete_batches=False):
         items = os.listdir(self.csv_base_path)
@@ -311,15 +318,12 @@ def main():
     stitch_threshold = 2000
     highmag_layer = 'highmag'
     eight_bit = True
-
-    # Initialize ImageJ VM
-    ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
-    # TODO: Put away ImageJ print spam to keep console cleaner
+    max_processes = 2
 
     # Parse and save the metadata
-    stitcher = Stitcher(ij, highmag_layer, stitch_radius, base_path, project_name)
+    stitcher = Stitcher(highmag_layer, stitch_radius, base_path, project_name)
     stitcher.parse_create_csv_batches(batch_size=batch_size)
-    stitcher.manage_batches(stitch_threshold, eight_bit)
+    stitcher.manage_batches(stitch_threshold, eight_bit, max_processes=max_processes)
     # stitcher.combine_csvs()
 
 
