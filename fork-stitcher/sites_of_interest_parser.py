@@ -569,7 +569,6 @@ class MapsXmlParser:
                     else:
                         self.annotation_tiles[annotation_name]['surrounding_tile_exists'].append(False)
 
-
     @staticmethod
     def save_annotation_tiles_to_csv(annotation_tiles, base_header, csv_path, batch_size=0):
         """Saves the information about all annotations to a csv file

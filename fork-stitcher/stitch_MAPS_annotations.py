@@ -185,10 +185,6 @@ class Stitcher:
                 output_filename = annotation_name + '.png'
                 ij.io().save(stitched_img_dataset, str(self.output_path / output_filename))
 
-                # TODO: Find a way to do improved memory management or reset the running instance, e.g.:
-                #  https://forum.image.sc/t/how-to-find-memory-leaks-in-plugins-what-needs-to-get-disposed/10211/12
-                # ij.getContext().dispose()
-                # self.ij.window().clear()
                 stitched_img.close()
 
             else:
@@ -198,6 +194,9 @@ class Stitcher:
                 logging.warning('Not stitching fork {}, because the stitching calculations displaced the images more '
                                 'than {} pixels'.format(annotation_name, stitch_threshold))
 
+
+            # Close any open images to free up RAM. Otherwise, get an OutOfMemory Exception after a few rounds
+            # ij.getContext().dispose()
             for img in imps:
                 img.close()
             for java_img in java_imgs:
@@ -320,9 +319,6 @@ def main():
     highmag_layer = 'highmag'
     eight_bit = True
     max_processes = 2
-
-    # Initialize ImageJ VM
-    # ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
 
     # Parse and save the metadata
     stitcher = Stitcher(highmag_layer, stitch_radius, base_path, project_name)
