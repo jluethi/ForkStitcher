@@ -9,6 +9,9 @@ Welcome to MAPS XML Parser's documentation!
 .. automodule:: sites_of_interest_parser
     :members:
 
+.. automodule:: stitch_MAPS_annotations
+    :members:
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

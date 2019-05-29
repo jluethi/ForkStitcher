@@ -135,8 +135,8 @@ annotation. The values are the key to the corresponding layer in the layer dict 
 image as a Path variable (img_path), its filename, the name of the layer (layer_name) and the relative
 position x &amp; y of the tile within that layer (RelativeTilePosition_x &amp; RelativeTilePosition_y), the
 absolute stage position of the annotation (Annotation_StagePosition_x and Annotation_StagePosition_y), the
-position of the annotation within the tile image (in pixels, Annotation_img_position_x &amp;
-Annotation_img_position_y), a list of the surrounding tile names (surrounding_tile_names) and a list of
+position of the annotation within the tile image (in pixels, Annotation_tile_img_position_x &amp;
+Annotation_tile_img_position_y), a list of the surrounding tile names (surrounding_tile_names) and a list of
 booleans of whether each of the surrounding tiles exist, including the tile itself (surrounding_tile_exists)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
@@ -290,7 +290,7 @@ corresponding layer in the layer dict (layer), the path to the image as a Path v
 filename, the name of the layer (layer_name) and the relative position x &amp; y of the tile within that layer
 (RelativeTilePosition_x &amp; RelativeTilePosition_y), the absolute stage position of the annotation
 (Annotation_StagePosition_x and Annotation_StagePosition_y), the position of the annotation within the tile
-image (in pixels, Annotation_img_position_x &amp; Annotation_img_position_y).
+image (in pixels, Annotation_tile_img_position_x &amp; Annotation_tile_img_position_y).
 The surrounding_tile_names and surrounding_tile_exists are added in determine_surrounding_tiles</p>
 </dd></dl>
 
@@ -304,6 +304,28 @@ The keys are the combined layer name &amp; filename of the tile and the values a
 contains the information about what layer it belongs to (layer, key to the layer dict), the path to the image as
 a Path variable (img_path), its filename, the name of the layer (layer_name) and its relative position x &amp; y
 within that layer (RelativeTilePosition_x &amp; RelativeTilePosition_y)</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="sites_of_interest_parser.MapsXmlParser.load_annotations_from_csv">
+<em class="property">static </em><code class="descname">load_annotations_from_csv</code><span class="sig-paren">(</span><em>base_header</em>, <em>csv_path</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.load_annotations_from_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the annotations saved by sites_of_interest_parser.save_annotation_tiles_to_csv</p>
+<p>Recreates a dictionary for all the contents except the columns of the base_header
+Parses the string of a list for surrounding_tile_exists &amp; surrounding_tile_names back to a list</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_header</strong> (<em>list</em>) – list of column headers that will be ignored when loading the data</p></li>
+<li><p><strong>csv_path</strong> (<em>Path</em>) – pathlib Path to the csv file that will be created. Must end in .csv</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>annotation_tiles</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="staticmethod">
@@ -336,6 +358,263 @@ contains the relevant output of the XML parsing</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="sites_of_interest_parser.MapsXmlParser.save_annotation_tiles_to_csv">
+<em class="property">static </em><code class="descname">save_annotation_tiles_to_csv</code><span class="sig-paren">(</span><em>annotation_tiles</em>, <em>base_header</em>, <em>csv_path</em>, <em>batch_size=0</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.save_annotation_tiles_to_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the information about all annotations to a csv file</p>
+<p>Goes through the annotation_tiles dictionary and saves it to a csv file. Overwrites any existing file in
+the same location. Can write everything into one csv file (default) or into multiple batches of a given size</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>annotation_tiles</strong> (<em>dict</em>) – annotation tiles dictionary with a structure like self.annotation_tiles</p></li>
+<li><p><strong>base_header</strong> (<em>list</em>) – list of strings that will be headers but will not contain any content</p></li>
+<li><p><strong>csv_path</strong> (<em>Path</em>) – pathlib Path to the csv file that will be created. Must end in .csv</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em>) – The size of each batch. Defaults to 0. If it’s 0, everything is saved into one csv file.
+Otherwise, the dataframe is divided into batches of batch_size and saved to separate csv files</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>list of all the paths to the saved csv files</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-stitch_MAPS_annotations"></span><dl class="class">
+<dt id="stitch_MAPS_annotations.Stitcher">
+<em class="property">class </em><code class="descclassname">stitch_MAPS_annotations.</code><code class="descname">Stitcher</code><span class="sig-paren">(</span><em>base_path: str</em>, <em>project_name: str</em>, <em>csv_folder: str = 'annotation_csv'</em>, <em>output_folder: str = 'stitchedForks'</em>, <em>stitch_radius: int = 1</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stitches Talos images based on csv files containing the necessary information</p>
+<p>This class handles the stitching of Talos images based on a csv file like the one created by the MapsXmlParser.
+It creates the necessary folders, calls MapsXmlParser for the parsing and saving of the necessary metadata and then
+manages the stitching of all annotations. Current implementation of stitching is hard-coded to stitch_radius = 1,
+the size of the Talos images and an overlap of 10% in its stitching parameters in the stitch_annotated_tiles
+function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_path</strong> (<em>str</em>) – Path (as a string) to the directory containing the project_name folder.</p></li>
+<li><p><strong>project_name</strong> (<em>str</em>) – Name of the directory containing the MAPSProject.xml file and the LayersData
+folder of the MAPS project. Will be used as the location for the output folders. Must be in base_path folder</p></li>
+<li><p><strong>csv_folder</strong> (<em>str</em>) – Name of the folders where the csv files are saved to</p></li>
+<li><p><strong>output_folder</strong> (<em>str</em>) – Name of the folder where the stitched forks are saved to</p></li>
+<li><p><strong>stitch_radius</strong> (<em>int</em>) – The number of images in each direction from the tile containing the annotation should be
+stitched.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="stitch_MAPS_annotations.Stitcher.stitch_radius">
+<code class="descname">stitch_radius</code><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.stitch_radius" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of images in each direction from the tile containing the annotation should be
+stitched.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stitch_MAPS_annotations.Stitcher.project_name">
+<code class="descname">project_name</code><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.project_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name of the current project being processed</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stitch_MAPS_annotations.Stitcher.project_folder_path">
+<code class="descname">project_folder_path</code><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.project_folder_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Full path to the project folder, containing the MAPSProject.xml file and the
+LayersData folder</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stitch_MAPS_annotations.Stitcher.output_path">
+<code class="descname">output_path</code><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.output_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Full path to the output folder where the stitched images are stored</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stitch_MAPS_annotations.Stitcher.csv_base_path">
+<code class="descname">csv_base_path</code><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.csv_base_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Full path to the folder where the csv files with all annotation metadata are stored</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stitch_MAPS_annotations.Stitcher.base_header">
+<code class="descname">base_header</code><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.base_header" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of all the column headers that should be added to the csv file (for classification of
+annotations and for measurements made on them)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="stitch_MAPS_annotations.Stitcher.combine_csvs">
+<code class="descname">combine_csvs</code><span class="sig-paren">(</span><em>delete_batches: bool = False</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.combine_csvs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combines batch csv output files into the final csv file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>delete_batches</strong> (<em>bool</em>) – Whether the batch csv files should be deleted after stitching them to the combined
+csv file. Defaults to False (not deleting the batch csv files)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="stitch_MAPS_annotations.Stitcher.manage_batches">
+<code class="descname">manage_batches</code><span class="sig-paren">(</span><em>stitch_threshold: int = 1000</em>, <em>eight_bit: bool = True</em>, <em>max_processes: int = 4</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.manage_batches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manages the parallelization of the stitching of batches</p>
+<p>As multiprocessing can make some issues, if max_processes is set to 1, it does not use multiprocessing calls.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>stitch_threshold</strong> (<em>int</em>) – Threshold to judge stitching quality by. If images would be moved more than this
+threshold, the stitching is not performed</p></li>
+<li><p><strong>eight_bit</strong> (<em>bool</em>) – Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
+images as 8bit</p></li>
+<li><p><strong>max_processes</strong> (<em>int</em>) – The number of parallel processes that should be used to process the batches.
+Be careful, each batch needs a lot of memory</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="stitch_MAPS_annotations.Stitcher.parse_create_csv_batches">
+<code class="descname">parse_create_csv_batches</code><span class="sig-paren">(</span><em>batch_size: int</em>, <em>highmag_layer: str = 'highmag'</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.parse_create_csv_batches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the batch csv files of annotation_tiles</p>
+<p>Calls the MapsXmlParser to parse the XML file of the acquisition and save the annotation_tiles as a csv in
+batches</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>batch_size</strong> (<em>int</em>) – Description of arg2</p></li>
+<li><p><strong>highmag_layer</strong> (<em>str</em>) – Name of the image layer in MAPS for which tiles containing annotations should
+be found. Defaults to ‘highmag’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>First value: The annotation_tiles dictionary. Second value: A list of the filenames of the csv files</dt><dd><p>that were created</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="stitch_MAPS_annotations.Stitcher.process_stitching_params">
+<em class="property">static </em><code class="descname">process_stitching_params</code><span class="sig-paren">(</span><em>stitch_params</em>, <em>annotation_coordinates</em>, <em>stitch_threshold</em>, <em>original_positions</em>, <em>center_index: int</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.process_stitching_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the position of the annotation in the stitched image and decides if stitching worked well</p>
+<p>Based on the stitch_threshold, this function decides whether the stitching has worked well. If any image was
+moved by more than the threshold, it returns False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>stitch_params</strong> (<em>np.array</em>) – Array of the stitching parameters calculated by imageJ stitching</p></li>
+<li><p><strong>annotation_coordinates</strong> (<em>np.array</em>) – Array of the coordinates of the annotation in the image before stitching</p></li>
+<li><p><strong>stitch_threshold</strong> (<em>int</em>) – Threshold to decide whether stitching should be performed</p></li>
+<li><p><strong>original_positions</strong> (<em>np.Array</em>) – Array of the initial positions of the images before stitching, used to
+calculate the shift by stitching</p></li>
+<li><p><strong>center_index</strong> (<em>int</em>) – Index of which tile in the stitched image was the original center. Used to calculate
+the position of the annotation in the stitched image</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>First value is a bool that informs whether the stitching should be done. Second value is an array with</dt><dd><p>the coordinates of the annotations in the stitched image</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="stitch_MAPS_annotations.Stitcher.stitch_annotated_tiles">
+<code class="descname">stitch_annotated_tiles</code><span class="sig-paren">(</span><em>annotation_tiles: dict</em>, <em>stitch_threshold: int = 1000</em>, <em>eight_bit: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.stitch_annotated_tiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stitches 3x3 images for all annotations in annotation_tiles</p>
+<p>Goes through all annotations in annotation_tiles dict, load the center file and the existing surrounding files.
+Sets up the stitching configuration according to the neighboring tiles and calculates the stitching parameters.
+If the calculated stitching moves all images by less than the threshold in any direction, it performs the
+stitching. Otherwise, a log message is made and the center image is copied to the results folder.
+Finally, it sets the pixel size and converts the stitched image to 8bit before saving it to disk. Everything is
+performed using pyimagej api to use imageJ Java APIs.
+Can deal with 3x3, 3x2, 2x3 and 2x2 squares with 10% overlap.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>annotation_tiles</strong> (<em>dict</em>) – annotation_tiles dictionary, e.g. from MapsXmlParser. See MapsXmlParser for content
+details. Needs to contain img_path, pixel_size, Annotation_tile_img_position_x,
+Annotation_tile_img_position_y, surrounding_tile_names &amp; surrounding_tile_exists for this function
+to work</p></li>
+<li><p><strong>stitch_threshold</strong> (<em>int</em>) – Threshold to judge stitching quality by. If images would be moved more than this
+threshold, the stitching is not performed</p></li>
+<li><p><strong>eight_bit</strong> (<em>bool</em>) – Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
+images as 8bit</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>annotation_tiles, now includes information about the position of the annotation in the stitched image</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="stitch_MAPS_annotations.Stitcher.stitch_batch">
+<code class="descname">stitch_batch</code><span class="sig-paren">(</span><em>annotation_csv_path</em>, <em>stitch_threshold: int = 1000</em>, <em>eight_bit: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.stitch_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Submits the stitching of a batch, the writing of an updated csv file and the deletion of the old csv file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>annotation_csv_path</strong> (<em>Path</em>) – The path to the folder containing the annotation_tiles csvs.</p></li>
+<li><p><strong>stitch_threshold</strong> (<em>int</em>) – Threshold to judge stitching quality by. If images would be moved more than this
+threshold, the stitching is not performed</p></li>
+<li><p><strong>eight_bit</strong> (<em>bool</em>) – Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
+images as 8bit</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>

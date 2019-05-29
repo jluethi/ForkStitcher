@@ -1,27 +1,37 @@
-import os
-import subprocess
 import logging
 from pathlib import Path
-import re
-from multiprocessing import Pool
+
+from stitch_MAPS_annotations import Stitcher
 
 def main():
-    csv_base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\8330_siXRCC3_CPT_3rd_2ul\\annotation_csv\\'
-    items = os.listdir(csv_base_path)
-    nb_files = len(items)
+    # Paths
+    base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
+    # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
+    project_name = '8330_siNeg_CPT_3rd'
+    # project_name = '8330_siXRCC3_CPT_3rd_2ul'
+    # project_name = '8373_3_siXRCC3_HU_1st_y1'
 
-    while nb_files > 0:
+    csv_folder = 'annotation_csv_tests'
+    output_folder = 'stitchedForks_test'
 
-        try:
-            args = ['python', 'stitch_MAPS_annotations.py']
-            subprocess.Popen(args)
+    # TODO: Make logging work on Windows and with multiprocessing
+    # Logging
+    logging.basicConfig(filename=Path(base_path) / project_name / (project_name + '.log'), level=logging.INFO,
+                        format='%(asctime)s %(message)s')
+    logging.info('Processing experiment {}'.format(project_name))
 
-        except:
-            pass
+    # Parameters
+    batch_size = 5
+    stitch_threshold = 1000
+    highmag_layer = 'highmag'
+    eight_bit = True
+    max_processes = 1
 
-
-        items = os.listdir(csv_base_path)
-        nb_files = len(items)
+    # Parse and save the metadata
+    stitcher = Stitcher(base_path, project_name, csv_folder, output_folder)
+    stitcher.parse_create_csv_batches(batch_size=batch_size, highmag_layer=highmag_layer)
+    stitcher.manage_batches(stitch_threshold, eight_bit, max_processes=max_processes)
+    # stitcher.combine_csvs()
 
 if __name__ == "__main__":
     main()
