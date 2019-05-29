@@ -617,6 +617,7 @@ class MapsXmlParser:
             current_annotation_pd = pd.DataFrame(current_annotation, index=[0])
 
             # Default: everything is saved into one csv file
+            # TODO: Add an Excel option or get rid of extra lines in Excel after writing csvs on Windows
             if batch_size == 0:
                 with open(str(csv_path), 'a') as f:
                     current_annotation_pd.to_csv(f, header=False, index=False)

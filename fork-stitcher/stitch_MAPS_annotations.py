@@ -3,19 +3,45 @@ from pathlib import Path
 import re
 import numpy as np
 from multiprocessing import Pool
+import shutil
 
 import sites_of_interest_parser as sip
 import os
 
 import imagej
 
-# ij = imagej.init('/Applications/Fiji.app')
 ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
 
 
 class Stitcher:
-    def __init__(self, highmag_layer, stitch_radius, base_path, project_name):
-        self.highmag_layer = highmag_layer
+    """ Stitches Talos images based on csv files containing the necessary information
+
+    This class handles the stitching of Talos images based on a csv file like the one created by the MapsXmlParser.
+    It creates the necessary folders, calls MapsXmlParser for the parsing and saving of the necessary metadata and then
+    manages the stitching of all annotations. Current implementation of stitching is hard-coded to stitch_radius = 1,
+    the size of the Talos images and an overlap of 10% in its stitching parameters in the stitch_annotated_tiles
+    function
+
+    Args:
+        base_path (str): Path (as a string) to the directory containing the project_name folder.
+        project_name (str): Name of the directory containing the MAPSProject.xml file and the LayersData
+            folder of the MAPS project. Will be used as the location for the output folders. Must be in base_path folder
+        stitch_radius (int): The number of images in each direction from the tile containing the annotation should be
+            stitched.
+
+    Attributes:
+        stitch_radius (int): The number of images in each direction from the tile containing the annotation should be
+            stitched.
+        project_name (str): Name of the current project being processed
+        project_folder_path (Path): Full path to the project folder, containing the MAPSProject.xml file and the
+            LayersData folder
+        output_path (Path): Full path to the output folder where the stitched images are stored
+        csv_base_path (Path): Full path to the folder where the csv files with all annotation metadata are stored
+        base_header (list): List of all the column headers that should be added to the csv file (for classification of
+            annotations and for measurements made on them)
+
+    """
+    def __init__(self, base_path: str, project_name: str, stitch_radius: int = 1):
         self.stitch_radius = stitch_radius
 
         self.project_name = project_name
@@ -36,15 +62,36 @@ class Stitcher:
                             'list for ssDNA at junction (nt)',
                             ]
 
-    def stitch_annotated_tiles(self, annotation_tiles: dict, stitch_threshold, eight_bit: bool = False):
+    def stitch_annotated_tiles(self, annotation_tiles: dict, stitch_threshold: int = 1000, eight_bit: bool = True):
+        """Stitches 3x3 images for all annotations in annotation_tiles
+
+        Goes through all annotations in annotation_tiles dict, load the center file and the existing surrounding files.
+        Sets up the stitching configuration according to the neighboring tiles and calculates the stitching parameters.
+        If the calculated stitching moves all images by less than the threshold in any direction, it performs the
+        stitching. Otherwise, a log message is made and the center image is copied to the results folder.
+        Finally, it sets the pixel size and converts the stitched image to 8bit before saving it to disk. Everything is
+        performed using pyimagej api to use imageJ Java APIs.
+        Can deal with 3x3, 3x2, 2x3 and 2x2 squares with 10% overlap.
+
+        Args:
+            annotation_tiles (dict): annotation_tiles dictionary, e.g. from MapsXmlParser. See MapsXmlParser for content
+                details. Needs to contain img_path, pixel_size, Annotation_tile_img_position_x,
+                Annotation_tile_img_position_y, surrounding_tile_names & surrounding_tile_exists for this function
+                to work
+            stitch_threshold (int): Threshold to judge stitching quality by. If images would be moved more than this
+                threshold, the stitching is not performed
+            eight_bit (bool): Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
+                images as 8bit
+
+        Returns:
+            dict: annotation_tiles, now includes information about the position of the annotation in the stitched image
+
+        """
         # This function takes the parser object containing all the information about the MAPS project and its
         # annotations. It performs the stitching.
 
         for annotation_name in annotation_tiles:
             number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
-
-            # If the image files for the 8 neighbors and the tile exist, stitch the images
-
             logging.info('Stitching {}'.format(annotation_name))
             img_path = annotation_tiles[annotation_name]['img_path']
 
@@ -63,10 +110,10 @@ class Stitcher:
                     print(neighbor)
                     imagej2_img = ij.io().open(str(img_path / neighbor))
                     imps.append(ij.convert().convert(imagej2_img, image_plus_class))
-
             java_imgs = ij.py.to_java(imps)
-            # Define starting positions based on what neighbor tiles exist
 
+            # Define starting positions based on what neighbor tiles exist
+            # TODO: Calculate these starting positions based on the overlap metadata
             positions_jlist = ij.py.to_java([])
             # All tiles exist
             if number_existing_neighbor_tiles == 9:
@@ -80,7 +127,7 @@ class Stitcher:
                              [7373.0, 3686.0]]
                 center_index = 4
             elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, False, False, True, True,
-                                                                                True, True, True, True]:
+                                                                                  True, True, True, True]:
                 positions = [[0.0, 0.0], [3686.0, 0.0], [7373.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0],
                              [7373.0, 3686.0]]
                 center_index = 1
@@ -91,15 +138,15 @@ class Stitcher:
                              [3686.0, 7373.0]]
                 center_index = 2
             elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [True, True, False, True, True,
-                                                                                False, True, True, False]:
+                                                                                  False, True, True, False]:
                 positions = [[0.0, 0.0], [3686.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0], [0.0, 7373.0],
                              [3686.0, 7373.0]]
                 center_index = 3
             # Corner Tile: Only 2x2 tiles to stitch
             elif number_existing_neighbor_tiles == 4:
                 positions = [[0.0, 0.0], [3686.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0]]
-                if annotation_tiles[annotation_name]['surrounding_tile_exists'] == [True, True, False, True, True, False,
-                                                                                    False, False, False]:
+                if annotation_tiles[annotation_name]['surrounding_tile_exists'] == [True, True, False, True, True,
+                                                                                    False, False, False, False]:
                     center_index = 3
                 elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [False, True, True, False, True,
                                                                                       True, False, False, False]:
@@ -188,12 +235,12 @@ class Stitcher:
                 stitched_img.close()
 
             else:
-                # TODO: Deal with possibility of stitching not having worked well (e.g. by trying again with
-                #  changed parameters or by putting the individual images in a folder so that they could be
-                #  stitched manually)
                 logging.warning('Not stitching fork {}, because the stitching calculations displaced the images more '
-                                'than {} pixels'.format(annotation_name, stitch_threshold))
-
+                                'than {} pixels. Instead, just copying the center image to the target folder'
+                                .format(annotation_name, stitch_threshold))
+                center_file_path = Path(img_path) / annotation_tiles[annotation_name]['surrounding_tile_names'][4]
+                output_filename = self.output_path / (annotation_name + '_StitchingFailed_centerOnly.tiff')
+                shutil.copy(center_file_path, output_filename)
 
             # Close any open images to free up RAM. Otherwise, get an OutOfMemory Exception after a few rounds
             # ij.getContext().dispose()
@@ -230,17 +277,17 @@ class Stitcher:
 
         return [good_stitching, stitched_annotation_coordinates.astype(int)]
 
-    def parse_create_csv_batches(self, batch_size):
+    def parse_create_csv_batches(self, highmag_layer, batch_size):
         # Make folders for csv files
         os.makedirs(str(self.csv_base_path), exist_ok=True)
         csv_path = self.csv_base_path / (self.project_name + '_annotations' + '.csv')
 
         parser = sip.MapsXmlParser(project_folder=self.project_folder_path, use_unregistered_pos=True,
-                                   name_of_highmag_layer=self.highmag_layer, stitch_radius=self.stitch_radius)
+                                   name_of_highmag_layer=highmag_layer, stitch_radius=self.stitch_radius)
 
         annotation_tiles = parser.parse_xml()
         annotation_csvs = sip.MapsXmlParser.save_annotation_tiles_to_csv(annotation_tiles, self.base_header, csv_path,
-                                                           batch_size=batch_size)
+                                                                         batch_size=batch_size)
 
         return [annotation_tiles, annotation_csvs]
 
@@ -252,7 +299,7 @@ class Stitcher:
         stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded,
                                                                 stitch_threshold=stitch_threshold,
                                                                 eight_bit=eight_bit)
-        csv_stitched_path = str(annotation_csv_path)[:-4] + '_stitched.csv'
+        csv_stitched_path = Path(str(annotation_csv_path)[:-4] + '_stitched.csv')
 
         sip.MapsXmlParser.save_annotation_tiles_to_csv(stitched_annotation_tiles, self.base_header, csv_stitched_path)
         os.remove(annotation_csv_path)
@@ -315,14 +362,14 @@ def main():
     # Parameters
     stitch_radius = 1
     batch_size = 5
-    stitch_threshold = 2000
+    stitch_threshold = 1000
     highmag_layer = 'highmag'
     eight_bit = True
     max_processes = 2
 
     # Parse and save the metadata
-    stitcher = Stitcher(highmag_layer, stitch_radius, base_path, project_name)
-    stitcher.parse_create_csv_batches(batch_size=batch_size)
+    stitcher = Stitcher(base_path, project_name, stitch_radius)
+    stitcher.parse_create_csv_batches(highmag_layer=highmag_layer, batch_size=batch_size)
     stitcher.manage_batches(stitch_threshold, eight_bit, max_processes=max_processes)
     # stitcher.combine_csvs()
 
