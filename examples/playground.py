@@ -29,24 +29,43 @@ import numpy as np
 # csv_batch_path = csv_path[:-4] + '_{}.csv'.format(0)
 # print(csv_batch_path)
 
-from multiprocessing import Pool
+# from multiprocessing import Pool
+# import imagej
+# ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10')
+#
+#
+# class Test:
+#     def f(self, i):
+#         print(i)
+#
+#     def run(self):
+#         print('Running')
+#         with Pool(processes=4) as pool:
+#             for i in range(10):
+#                 pool.apply_async(self.f, args=(i, ))
+#
+#             pool.close()
+#             pool.join()
+#
+# test = Test()
+# test.run()
+
+
 import imagej
+import tkinter as tk
 ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10')
+root = tk.Tk()
+
+root.geometry("+2000+0")
+
+tk.Label(root, text='Test1').grid(row=0, column=0)
+tk.Checkbutton(root, text='Test2').grid(row=1, column=0)
 
 
-class Test:
-    def f(self, i):
-        print(i)
+root.mainloop()
 
-    def run(self):
-        print('Running')
-        with Pool(processes=4) as pool:
-            for i in range(10):
-                pool.apply_async(self.f, args=(i, ))
 
-            pool.close()
-            pool.join()
 
-test = Test()
-test.run()
+
+
 
