@@ -8,6 +8,7 @@ import pandas as pd
 import math
 from pathlib import Path
 import logging
+import copy
 
 
 class MapsXmlParser:
@@ -491,7 +492,7 @@ class MapsXmlParser:
             current_tile = self.tiles[self._tile_names[tile_index][1]]
 
             if quadratic_distance[tile_index] < distance_threshold:
-                self.annotation_tiles[annotation_name] = current_tile
+                self.annotation_tiles[annotation_name] = copy.deepcopy(current_tile)
                 self.annotation_tiles[annotation_name]['pixel_size'] = self.pixel_size
                 self.annotation_tiles[annotation_name]['Annotation_StagePosition_x'] = \
                     self.annotations[annotation_name]['StagePosition_x']
