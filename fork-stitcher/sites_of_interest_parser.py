@@ -592,43 +592,50 @@ class MapsXmlParser:
         csv_files = []
         # Initialize empty csv file (or csv files if batch mode is used)
         base_header_2 = ['Image'] + base_header
-        header_addition = list(list(annotation_tiles.values())[0].keys())
-        if batch_size == 0:
-            csv_header = pd.DataFrame(columns=base_header_2 + header_addition)
-            csv_header.to_csv(str(csv_path), index=False)
-            csv_files.append(str(csv_path))
-        else:
-            nb_batches = int(math.ceil(len(annotation_tiles.keys()) / batch_size))
-            for j in range(nb_batches):
-                csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(f'{j:05}')
-                csv_header = pd.DataFrame(columns=base_header_2 + header_addition)
-                csv_header.to_csv(csv_batch_path, index=False)
-                csv_files.append(csv_batch_path)
-
-        for i, annotation_name in enumerate(annotation_tiles):
-            current_annotation = {'Image': annotation_name}
-            for header in base_header:
-                current_annotation[header] = ''
-
-            for info_key in annotation_tiles[annotation_name]:
-                current_annotation[info_key] = annotation_tiles[annotation_name][info_key]
-                if type(current_annotation[info_key]) == list:
-                    current_annotation[info_key] = '[' + ','.join(map(str, current_annotation[info_key])) + ']'
-
-            current_annotation_pd = pd.DataFrame(current_annotation, index=[0])
-
-            # Default: everything is saved into one csv file
-            # TODO: Add an Excel option or get rid of extra lines in Excel after writing csvs on Windows
+        # If there are annotations, save them. Otherwise, log a warning.
+        if annotation_tiles:
+            header_addition = list(list(annotation_tiles.values())[0].keys())
             if batch_size == 0:
-                with open(str(csv_path), 'a') as f:
-                    current_annotation_pd.to_csv(f, header=False, index=False)
+                csv_header = pd.DataFrame(columns=base_header_2 + header_addition)
+                csv_header.to_csv(str(csv_path), index=False)
+                csv_files.append(str(csv_path))
             else:
-                current_batch = int(i/batch_size)
-                csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(f'{current_batch:05}')
-                with open(str(csv_batch_path), 'a') as f:
-                    current_annotation_pd.to_csv(f, header=False, index=False)
+                nb_batches = int(math.ceil(len(annotation_tiles.keys()) / batch_size))
+                for j in range(nb_batches):
+                    csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(f'{j:05}')
+                    csv_header = pd.DataFrame(columns=base_header_2 + header_addition)
+                    csv_header.to_csv(csv_batch_path, index=False)
+                    csv_files.append(csv_batch_path)
 
-        return csv_files
+            for i, annotation_name in enumerate(annotation_tiles):
+                current_annotation = {'Image': annotation_name}
+                for header in base_header:
+                    current_annotation[header] = ''
+
+                for info_key in annotation_tiles[annotation_name]:
+                    current_annotation[info_key] = annotation_tiles[annotation_name][info_key]
+                    if type(current_annotation[info_key]) == list:
+                        current_annotation[info_key] = '[' + ','.join(map(str, current_annotation[info_key])) + ']'
+
+                current_annotation_pd = pd.DataFrame(current_annotation, index=[0])
+
+                # Default: everything is saved into one csv file
+                # TODO: Add an Excel option or get rid of extra lines in Excel after writing csvs on Windows
+                if batch_size == 0:
+                    with open(str(csv_path), 'a') as f:
+                        current_annotation_pd.to_csv(f, header=False, index=False)
+                else:
+                    current_batch = int(i/batch_size)
+                    csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(f'{current_batch:05}')
+                    with open(str(csv_batch_path), 'a') as f:
+                        current_annotation_pd.to_csv(f, header=False, index=False)
+
+            return csv_files
+
+        else:
+            logging.warning('No annotations were found. Therefore, none are saved.')
+
+            return []
 
     @staticmethod
     def load_annotations_from_csv(base_header, csv_path):
