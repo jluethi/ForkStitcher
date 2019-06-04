@@ -212,98 +212,91 @@ class MapsXmlParser:
                                         # Only proceed to process TileLayers
                                         layer_type = layer.attrib['{http://www.w3.org/2001/XMLSchema-instance}type']
                                         if layer_type == 'TileLayer':
-                                            for layer_content in layer:
-                                                if layer_content.tag.endswith('metaDataLocation'):
-                                                    metadata_location = layer_content.text
-                                                    self.layers[metadata_location] = {}
-                                            try:
-                                                for layer_content in layer:
-                                                    if layer_content.tag.endswith('totalHfw'):
-                                                        # noinspection PyUnboundLocalVariable
-                                                        self.layers[metadata_location]['totalHfw'] = float(
-                                                            list(layer_content.attrib.values())[1])
+                                            self.process_tile_layer(layer)
+                                        else:
+                                            print(layer_type)
 
-                                                    if layer_content.tag.endswith('tileHfw'):
-                                                        # noinspection PyUnboundLocalVariable
-                                                        self.layers[metadata_location]['tileHfw'] = float(
-                                                            list(layer_content.attrib.values())[1])
 
-                                                    if layer_content.tag.endswith('overlapHorizontal'):
-                                                        # noinspection PyUnboundLocalVariable
-                                                        self.layers[metadata_location]['overlapHorizontal'] = float(
-                                                            layer_content[0].text) / 100.
-                                                    if layer_content.tag.endswith('overlapVertical'):
-                                                        # noinspection PyUnboundLocalVariable
-                                                        self.layers[metadata_location]['overlapVertical'] = float(
-                                                            layer_content[0].text) / 100.
 
-                                                    if layer_content.tag.endswith('rotation'):
-                                                        # noinspection PyUnboundLocalVariable
-                                                        self.layers[metadata_location]['rotation'] = float(
-                                                            list(layer_content.attrib.values())[1])
+    def process_tile_layer(self, layer):
+        layer_type = layer.attrib['{http://www.w3.org/2001/XMLSchema-instance}type']
+        assert(layer_type == 'TileLayer')
+        for layer_content in layer:
+            if layer_content.tag.endswith('metaDataLocation'):
+                metadata_location = layer_content.text
+                self.layers[metadata_location] = {}
+        try:
+            for layer_content in layer:
+                if layer_content.tag.endswith('totalHfw'):
+                    # noinspection PyUnboundLocalVariable
+                    self.layers[metadata_location]['totalHfw'] = float(list(layer_content.attrib.values())[1])
 
-                                                    if layer_content.tag.endswith('rows'):
-                                                        # noinspection PyUnboundLocalVariable
-                                                        self.layers[metadata_location]['rows'] = \
-                                                            int(layer_content.text)
+                if layer_content.tag.endswith('tileHfw'):
+                    # noinspection PyUnboundLocalVariable
+                    self.layers[metadata_location]['tileHfw'] = float(list(layer_content.attrib.values())[1])
 
-                                                    if layer_content.tag.endswith('columns'):
-                                                        # noinspection PyUnboundLocalVariable
-                                                        self.layers[metadata_location]['columns'] = \
-                                                            int(layer_content.text)
+                if layer_content.tag.endswith('overlapHorizontal'):
+                    # noinspection PyUnboundLocalVariable
+                    self.layers[metadata_location]['overlapHorizontal'] = float(layer_content[0].text) / 100.
+                if layer_content.tag.endswith('overlapVertical'):
+                    # noinspection PyUnboundLocalVariable
+                    self.layers[metadata_location]['overlapVertical'] = float(layer_content[0].text) / 100.
 
-                                                    if layer_content.tag.endswith('scanResolution'):
-                                                        for scanres_info in layer_content:
-                                                            if scanres_info.tag.endswith('height'):
-                                                                height = int(scanres_info.text)
-                                                                if self.img_height == height or self.img_height == 0:
-                                                                    self.img_height = height
-                                                                else:
-                                                                    raise Exception(
-                                                                        'Image height needs to be constant for the '
-                                                                        'whole {} layers. It was {} before and is {} '
-                                                                        'in the current layers'.format(
-                                                                            self._name_of_highmag_layer,
-                                                                            self.img_height, height))
-                                                            if scanres_info.tag.endswith('width'):
-                                                                width = int(scanres_info.text)
-                                                                if self.img_width == width or self.img_width == 0:
-                                                                    self.img_width = width
-                                                                else:
-                                                                    raise Exception(
-                                                                        'Image width needs to be constant for the '
-                                                                        'whole {} layers. It was {} before and is {} '
-                                                                        'in the current layers'.format(
-                                                                            self._name_of_highmag_layer,
-                                                                            self.img_width, width))
+                if layer_content.tag.endswith('rotation'):
+                    # noinspection PyUnboundLocalVariable
+                    self.layers[metadata_location]['rotation'] = float(list(layer_content.attrib.values())[1])
 
-                                                    if layer_content.tag.endswith('pixelSize'):
-                                                        pixel_size = float(layer_content.attrib['Value'])
-                                                        if self.pixel_size == pixel_size or self.pixel_size == 0:
-                                                            self.pixel_size = pixel_size
-                                                        else:
-                                                            raise Exception('Pixel size needs to be constant for the '
-                                                                            'whole {} layers. It was {} before and is '
-                                                                            '{} in the current layers'.format(
-                                                                                self._name_of_highmag_layer,
-                                                                                self.pixel_size, pixel_size))
+                if layer_content.tag.endswith('rows'):
+                    # noinspection PyUnboundLocalVariable
+                    self.layers[metadata_location]['rows'] = int(layer_content.text)
 
-                                                    if layer_content.tag.endswith('StagePosition'):
-                                                        for positon_info in layer_content:
-                                                            if positon_info.tag == '{http://schemas.datacontract.org/' \
-                                                                                   '2004/07/Fei.Applications.SAL}x':
-                                                                # noinspection PyUnboundLocalVariable
-                                                                self.layers[metadata_location][
-                                                                    'StagePosition_center_x'] = float(positon_info.text)
-                                                            elif positon_info.tag == '{http://schemas.datacontract' \
-                                                                                     '.org/2004/07/Fei.Applications' \
-                                                                                     '.SAL}y':
-                                                                # noinspection PyUnboundLocalVariable
-                                                                self.layers[metadata_location][
-                                                                    'StagePosition_center_y'] = float(positon_info.text)
-                                            except NameError:
-                                                print("Can't find the metaDataLocation in the MAPS XML File")
-                                                sys.exit(-1)
+                if layer_content.tag.endswith('columns'):
+                    # noinspection PyUnboundLocalVariable
+                    self.layers[metadata_location]['columns'] = int(layer_content.text)
+
+                if layer_content.tag.endswith('scanResolution'):
+                    for scanres_info in layer_content:
+                        if scanres_info.tag.endswith('height'):
+                            height = int(scanres_info.text)
+                            if self.img_height == height or self.img_height == 0:
+                                self.img_height = height
+                            else:
+                                raise Exception(
+                                    'Image height needs to be constant for the whole {} layers. It was {} before and '
+                                    'is {} in the current layers'.format(self._name_of_highmag_layer,
+                                                                         self.img_height, height))
+                        if scanres_info.tag.endswith('width'):
+                            width = int(scanres_info.text)
+                            if self.img_width == width or self.img_width == 0:
+                                self.img_width = width
+                            else:
+                                raise Exception(
+                                    'Image width needs to be constant for the whole {} layers. It was {} before and '
+                                    'is {} in the current layers'.format(self._name_of_highmag_layer,
+                                                                         self.img_width, width))
+
+                if layer_content.tag.endswith('pixelSize'):
+                    pixel_size = float(layer_content.attrib['Value'])
+                    if self.pixel_size == pixel_size or self.pixel_size == 0:
+                        self.pixel_size = pixel_size
+                    else:
+                        raise Exception('Pixel size needs to be constant for the whole {} layers. It was {} before and '
+                                        'is {} in the current layers'.format(self._name_of_highmag_layer,
+                                                                             self.pixel_size, pixel_size))
+
+                if layer_content.tag.endswith('StagePosition'):
+                    for positon_info in layer_content:
+                        if positon_info.tag == '{http://schemas.datacontract.org/2004/07/Fei.Applications.SAL}x':
+                            # noinspection PyUnboundLocalVariable
+                            self.layers[metadata_location][
+                                'StagePosition_center_x'] = float(positon_info.text)
+                        elif positon_info.tag == '{http://schemas.datacontract.org/2004/07/Fei.Applications.SAL}y':
+                            # noinspection PyUnboundLocalVariable
+                            self.layers[metadata_location][
+                                'StagePosition_center_y'] = float(positon_info.text)
+        except NameError:
+            print("Can't find the metaDataLocation in the MAPS XML File")
+            sys.exit(-1)
 
     def extract_annotation_locations(self):
         """Extract annotation metadata from the XML file
@@ -633,7 +626,8 @@ class MapsXmlParser:
             return csv_files
 
         else:
-            logging.warning('No annotations were found. Therefore, none are saved.')
+            logging.warning('No annotations were found. Are the annotations in the correct place? They need to be in '
+                            'the top hierarchy of the highmag layer')
 
             return []
 
