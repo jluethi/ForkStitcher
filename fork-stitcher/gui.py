@@ -3,6 +3,9 @@ import tkinter as tk
 import tkinter.messagebox
 import tkinter.filedialog
 import _tkinter
+import time
+import logging
+import threading
 
 # from stitch_MAPS_annotations import Stitcher
 
@@ -53,7 +56,7 @@ class Gui:
         tk.Entry(master, textvariable=self.batch_size).grid(row=3, column=1)
 
         self.csv_folder_name = tk.StringVar()
-        tk.Label(master, text='Csv folder name').grid(row=4, column=0, sticky=tk.E)
+        tk.Label(master, text='CSV folder name').grid(row=4, column=0, sticky=tk.E)
         tk.Entry(master, textvariable=self.csv_folder_name).grid(row=4, column=1)
 
         self.output_folder = tk.StringVar()
@@ -67,6 +70,10 @@ class Gui:
         self.stitch_threshold = tk.IntVar()
         tk.Label(master, text='Stitch Threshold').grid(row=7, column=0, sticky=tk.E)
         tk.Entry(master, textvariable=self.stitch_threshold).grid(row=7, column=1)
+
+        self.continue_processing = tk.BooleanVar()
+        tk.Checkbutton(master, text='Continue Processing an Experiment', variable=self.continue_processing).\
+            grid(row=8, column=1)
 
 
         # Add a "continue existing processing" Button
@@ -87,7 +94,7 @@ class Gui:
         self.csv_folder_name.set('annotation_csv_tests')
         self.highmag_layer.set('highmag')
         self.stitch_threshold.set(1000)
-
+        self.continue_processing.set(False)
 
     def run(self):
         project_dir = Path(self.project_path.get())
@@ -96,21 +103,50 @@ class Gui:
 
         # TODO: Check if all parameters are set:
         params_set = self.check_all_parameters_set()
-        print(params_set)
-        if params_set:
-            pass
-            # TODO: Catch issues when wrong path is provided or another error/warning occurs in the stitcher
-            # stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
-            # stitcher.parse_create_csv_batches(batch_size=self.batch_size.get(), highmag_layer=self.highmag_layer.get())
-            # stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(),
-            #                         max_processes=self.max_processes.get())
-            # stitcher.combine_csvs(delete_batches=False)
+        if params_set and not self.continue_processing.get():
+            logging.info('Process experiment {}'.format(project_name))
+
+            # TODO: Catch the quitting of the window to shut down the thread
+            thread = threading.Thread(target=self.dummy, args=(10, ))
+            thread.start()
+            # thread = threading.Thread(target=self.run_from_beginning, args=(base_path, project_name,))
+            # thread.start()
+
+        elif params_set and self.continue_processing.get():
+            logging.info('Continuing to process experiment {}'.format(project_name))
+            # thread = threading.Thread(target=self.continue_run, args=(base_path, project_name,))
+            # thread.start()
 
         else:
             tkinter.messagebox.showwarning(title='Warning: parameters missing',
-                                           message='You need to enter the parameters in all the required fields')
+                                           message='You need to enter the correct kind of parameters in all the '
+                                                   'required fields and then try again')
 
         # TODO: Show all warnings to the user
+
+    # def run_from_beginning(self, base_path, project_name):
+    #     # TODO: Catch issues when wrong path is provided or another error/warning occurs in the stitcher => catch my custom Exception, display it to the user
+    #     stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
+    #     stitcher.parse_create_csv_batches(batch_size=self.batch_size.get(), highmag_layer=self.highmag_layer.get())
+    #     stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(),
+    #                             max_processes=self.max_processes.get())
+    #     stitcher.combine_csvs(delete_batches=True)
+    #
+    # def continue_run(self, base_path, project_name):
+    #     stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
+    #     stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(),
+    #                             max_processes=self.max_processes.get())
+    #     stitcher.combine_csvs(delete_batches=True)
+
+    def dummy(self, iterations):
+        # while True:
+        for i in range(iterations):
+            print('Running Dummy')
+            time.sleep(1)
+
+        for i in range(iterations):
+            print('Running Dummy 2! =D')
+            time.sleep(1)
 
 
     def ask_for_path(self):
@@ -137,13 +173,16 @@ class Gui:
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
     root = tk.Tk()
+    root.title('Fork Stitcher')
 
     root.geometry("+2000+0")
 
     p = Gui(root)
 
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
