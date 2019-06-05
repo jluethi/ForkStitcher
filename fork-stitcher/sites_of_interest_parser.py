@@ -116,8 +116,7 @@ class MapsXmlParser:
         try:
             root = ET.parse(xml_file_path).getroot()
         except FileNotFoundError:
-            print("Can't find the MAPS XML File at the location {}".format(xml_file_path))
-            sys.exit(-1)
+            raise XmlParsingFailed("Can't find the MAPS XML File at the location {}".format(xml_file_path))
         return root
 
     def parse_xml(self):
@@ -136,7 +135,6 @@ class MapsXmlParser:
         self.calculate_absolute_tile_coordinates()
         self.find_annotation_tile()
         self.determine_surrounding_tiles()
-        print(self.annotation_tiles)
         return self.annotation_tiles
 
     @staticmethod
@@ -199,10 +197,8 @@ class MapsXmlParser:
 
         # If the parsing did not find any tiles, raise an error
         if not self.layers:
-            raise XmlParsingFailed('Parsing the XML File did not find any tiles (images). Therefore, '
-                                    'cannot map annotations')
-
-        # TODO: Check that annotations were found
+            raise XmlParsingFailed('Parsing the XML File did not find any tiles (images). Therefore, cannot map '
+                                   'annotations')
 
         if not self.annotations:
             raise XmlParsingFailed('No annotations were found on tiles. Are there annotations in the MAPS project? '
