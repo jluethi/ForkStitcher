@@ -11,6 +11,11 @@ import logging
 import copy
 
 
+class XmlParsingFailed(Exception):
+    def __init__(self, message):
+        logging.error(message)
+
+
 class MapsXmlParser:
     """XML Parser class that processes MAPS XMLs and reveals the image tiles belonging to each annotation
 
@@ -126,12 +131,12 @@ class MapsXmlParser:
             dict: annotation_tiles
 
         """
-        self.extract_layer_metadata()
-        self.extract_annotation_locations()
+        self.extract_layers_and_annotations()
         self.get_relative_tile_locations()
         self.calculate_absolute_tile_coordinates()
         self.find_annotation_tile()
         self.determine_surrounding_tiles()
+        print(self.annotation_tiles)
         return self.annotation_tiles
 
     @staticmethod
@@ -175,50 +180,89 @@ class MapsXmlParser:
             path = path / folder
         return path
 
-    def extract_layer_metadata(self):
-        """Extract the information about all the layers in the high magnification acquisition layers
+    def extract_layers_and_annotations(self):
+        """Extract the information about all the layers in the high magnification acquisition layers and the annotations
 
-        Go through the XML file and look at the _name_of_highmag_layer layers group. Within that layers group, get only
-        the layers (acquisitions/squares) that contain microscope images (TileLayer), not any annotation layers or
-        others. Save them to the self.layers dictionary in the following way: The keys are local paths to
-        the metadata about the layers and the values are dictionaries again. Each layers contains the information
-        about the stage position of the center of the layers (in meters, StagePosition_center_x &
-        StagePosition_center_y), about the rotation of the layers relative to the global stage positions (in degrees,
-        rotation), the number of columns of tiles (images) in the layers (columns), the vertical & horizontal overlap
-        between the tiles (overlapVertical, overlapHorizontal), the number of rows of tiles (images) in the layers
-        (rows), the horizontal field width of each tile (its width in meters, tileHfw), the horizontal field width of
-        the whole layers (its width in meters, totalHfw) and the name of the layers (layer_name).
-        In a calculate_absolute_tile_coordinates, StagePosition_corner_x and StagePosition_corner_y are calculated and
-        added to the layers dictionary.
-        The parsing is quite ugly with all the if statements, because the tags have huge names and it's easier just
-        to check for what the tags end in.
+        Go through the XML file and submit all LayerGroups for processing. The LayerGroups contain both the Layer with
+        the _name_of_highmag_layer (=> the actual images) as well as the Annotation Layers containing the annotations.
+        At the end of processing, check whether the self.layers and the self.annotations dictionaries were filled. If
+        one of them was not filled, the parser could not find the highmag images or the annotations and raises an
+        exception.
 
         """
         # Extract the information about all the layers (high magnification acquisition layers)
-        for child in self._xml_file:
-            if child.tag.endswith('LayerGroups'):
-                for grand_child in child:
-                    for ggc in grand_child:
+        for xml_category in self._xml_file:
+            if xml_category.tag.endswith('LayerGroups'):
+                for sub_category in xml_category:
+                    if sub_category.tag.endswith('LayerGroup'):
+                        self._process_layer_group(sub_category)
 
-                        # Get the path to the metadata xml files for all the highmag layers,
-                        # the pixel size and the StagePosition of the layers
-                        if ggc.tag.endswith('displayName') and ggc.text == self._name_of_highmag_layer:
-                            logging.info('Extracting images from {} layers'.format(ggc.text))
+        # If the parsing did not find any tiles, raise an error
+        if not self.layers:
+            raise XmlParsingFailed('Parsing the XML File did not find any tiles (images). Therefore, '
+                                    'cannot map annotations')
 
-                            for highmag in grand_child:
-                                if highmag.tag.endswith('Layers'):
-                                    for layer in highmag:
-                                        # Check if this layers is a TileLayer or any other kind of layers.
-                                        # Only proceed to process TileLayers
-                                        layer_type = layer.attrib['{http://www.w3.org/2001/XMLSchema-instance}type']
-                                        if layer_type == 'TileLayer':
-                                            self.process_tile_layer(layer)
-                                        else:
-                                            print(layer_type)
+        # TODO: Check that annotations were found
 
+        if not self.annotations:
+            raise XmlParsingFailed('No annotations were found on tiles. Are there annotations in the MAPS project? '
+                                   'Are those annotations on the highmag tiles? If so, there may be an issue with the '
+                                   'calculation of the positions of the annotations. Check whether '
+                                   'find_annotation_tile gave any warnings.')
 
+    def _process_layer_group(self, layer_group):
+        """Recursively go through the LayerGroup and send TileLayer & AnnotationLayer for processing
 
-    def process_tile_layer(self, layer):
+        Goes through a given LayerGroup. If there are nested LayerGroups, it calls the function recursively. If a Layer
+        is a TileLayer and its name is the name of the highmag layer, it sends it for processing to
+        self._process_tile_layer. If a Layer is a Annotation Layer (independent of whether it's in a Layer Group that
+        has the highmag name or not), it is sent for processing in self._extract_annotation_locations.
+
+        Args:
+            layer_group: Part of the XML object that contains the information for a LayerGroup
+
+        """
+        for ggc in layer_group:
+            # Get the path to the metadata xml files for all the highmag layers,
+            # the pixel size and the StagePosition of the layers
+            if ggc.tag.endswith('displayName') and ggc.text == self._name_of_highmag_layer:
+                logging.info('Extracting images from {} layers'.format(ggc.text))
+
+                for highmag in layer_group:
+                    if highmag.tag.endswith('Layers'):
+                        for layer in highmag:
+                            # Check if this layers is a TileLayer or any other kind of layers.
+                            # Only proceed to process TileLayers
+                            layer_type = layer.attrib['{http://www.w3.org/2001/XMLSchema-instance}type']
+                            if layer_type == 'TileLayer':
+                                self._process_tile_layer(layer)
+                            elif layer_type == 'LayerGroup':
+                                # If there are nested LayerGroups, recursively call the function again
+                                # with this LayerGroup
+                                self._process_layer_group(layer)
+                            elif layer_type == 'AnnotationLayer':
+                                self._extract_annotation_locations(layer)
+                            else:
+                                logging.warning('XML Parser does not know how to deal with {} Layers and '
+                                                'therefore does not parse them'.format(layer_type))
+            else:
+                if ggc.tag.endswith('Layers'):
+                    for layer in ggc:
+                        layer_type = layer.attrib['{http://www.w3.org/2001/XMLSchema-instance}type']
+                        if layer_type == 'AnnotationLayer':
+                            self._extract_annotation_locations(layer)
+                        elif layer_type == 'LayerGroup':
+                            # If there are nested LayerGroups, recursively call the function again
+                            # with this LayerGroup
+                            self._process_layer_group(layer)
+
+    def _process_tile_layer(self, layer):
+        """Extracts all necessary information of a highmag Tile Layer and saves it to self.layers
+
+        Args:
+            layer: Part of the XML object that contains the information for a TileLayer
+
+        """
         layer_type = layer.attrib['{http://www.w3.org/2001/XMLSchema-instance}type']
         assert(layer_type == 'TileLayer')
         for layer_content in layer:
@@ -262,27 +306,27 @@ class MapsXmlParser:
                                 self.img_height = height
                             else:
                                 raise Exception(
-                                    'Image height needs to be constant for the whole {} layers. It was {} before and '
-                                    'is {} in the current layers'.format(self._name_of_highmag_layer,
-                                                                         self.img_height, height))
+                                    'Image height needs to be constant for the whole {} layer. It was {} before and '
+                                    'is {} in the current layer'.format(self._name_of_highmag_layer,
+                                                                        self.img_height, height))
                         if scanres_info.tag.endswith('width'):
                             width = int(scanres_info.text)
                             if self.img_width == width or self.img_width == 0:
                                 self.img_width = width
                             else:
                                 raise Exception(
-                                    'Image width needs to be constant for the whole {} layers. It was {} before and '
-                                    'is {} in the current layers'.format(self._name_of_highmag_layer,
-                                                                         self.img_width, width))
+                                    'Image width needs to be constant for the whole {} layer. It was {} before and '
+                                    'is {} in the current layer'.format(self._name_of_highmag_layer,
+                                                                        self.img_width, width))
 
                 if layer_content.tag.endswith('pixelSize'):
                     pixel_size = float(layer_content.attrib['Value'])
                     if self.pixel_size == pixel_size or self.pixel_size == 0:
                         self.pixel_size = pixel_size
                     else:
-                        raise Exception('Pixel size needs to be constant for the whole {} layers. It was {} before and '
-                                        'is {} in the current layers'.format(self._name_of_highmag_layer,
-                                                                             self.pixel_size, pixel_size))
+                        raise Exception('Pixel size needs to be constant for the whole {} layer. It was {} before and '
+                                        'is {} in the current layer'.format(self._name_of_highmag_layer,
+                                                                            self.pixel_size, pixel_size))
 
                 if layer_content.tag.endswith('StagePosition'):
                     for positon_info in layer_content:
@@ -295,48 +339,38 @@ class MapsXmlParser:
                             self.layers[metadata_location][
                                 'StagePosition_center_y'] = float(positon_info.text)
         except NameError:
-            print("Can't find the metaDataLocation in the MAPS XML File")
-            sys.exit(-1)
+            raise XmlParsingFailed("Can't find the metaDataLocation in the MAPS XML File")
 
-    def extract_annotation_locations(self):
-        """Extract annotation metadata from the XML file
+    def _extract_annotation_locations(self, annotation_layer):
+        """Extract annotation metadata from the XML file and saves them to the self.annotations dictionary
 
-
-        Goes through all the LayerGroups and looks at any layer in any LayerGroup that is an Annotation Layer. Get all
-        x & y positions of the annotations & the annotation name and save them in the annotations dictionary.
+        Only Sites Of Interest Annotations are processed. Areas of Interest are ignored. Gets the
+        x & y position of the annotation & the annotation name and saves them in the annotations dictionary.
         The keys are the names of the annotations (MAPS enforces uniqueness), its values are a dictionary containing the
         StagePosition_x & StagePosition_y positions of the annotation (in m => global coordinate system for the
         experiment)
 
         """
-        # Get all x & y positions of the annotations & the annotation name and save them in a dictionary.
-        # Keys are the annotation names, values are a dictionary of x & y positions of that annotation
-        for child in self._xml_file:
-            if child.tag.endswith('LayerGroups'):
-                for grand_child in child:
-                    for ggc in grand_child:
-                        # Finds all the layers that contain annotation and reads out the annotation details
-                        for gggc in ggc:
-                            if gggc.tag.endswith('anyType') and 'AnnotationLayer' in gggc.attrib.values():
-                                for annotation_content in gggc:
-                                    if annotation_content.tag.endswith('RealDisplayName'):
-                                        annotation_name = annotation_content.text
-                                        self.annotations[annotation_name] = {}
-                                try:
-                                    for annotation_content in gggc:
-                                        if annotation_content.tag.endswith('StagePosition'):
-                                            for a in annotation_content:
-                                                if a.tag == '{http://schemas.datacontract.org/' \
-                                                            '2004/07/Fei.Applications.SAL}x':
-                                                    # noinspection PyUnboundLocalVariable
-                                                    self.annotations[annotation_name]['StagePosition_x'] = float(a.text)
-                                                elif a.tag == '{http://schemas.datacontract.org/' \
-                                                              '2004/07/Fei.Applications.SAL}y':
-                                                    # noinspection PyUnboundLocalVariable
-                                                    self.annotations[annotation_name]['StagePosition_y'] = float(a.text)
-                                except NameError:
-                                    print("Can't find the Annotations Names in the MAPS XML File")
-                                    sys.exit(-1)
+        for potential_annotation_content in annotation_layer:
+            # Only check Sites Of Interest, not Area of Interest. Both are Annotation Layers, but Areas of Interest
+            # have the isArea value as true
+            if potential_annotation_content.tag.endswith('isArea') and potential_annotation_content.text == 'false':
+                for annotation_content in annotation_layer:
+                    if annotation_content.tag.endswith('RealDisplayName'):
+                        annotation_name = annotation_content.text
+                        self.annotations[annotation_name] = {}
+                try:
+                    for annotation_content in annotation_layer:
+                        if annotation_content.tag.endswith('StagePosition'):
+                            for a in annotation_content:
+                                if a.tag == '{http://schemas.datacontract.org/2004/07/Fei.Applications.SAL}x':
+                                    # noinspection PyUnboundLocalVariable
+                                    self.annotations[annotation_name]['StagePosition_x'] = float(a.text)
+                                elif a.tag == '{http://schemas.datacontract.org/2004/07/Fei.Applications.SAL}y':
+                                    # noinspection PyUnboundLocalVariable
+                                    self.annotations[annotation_name]['StagePosition_y'] = float(a.text)
+                except NameError:
+                    raise XmlParsingFailed("Can't find the Annotations Names in the MAPS XML File")
 
     def get_relative_tile_locations(self):
         """Read in all the metadata files for the different layers to get the relative tile positions
@@ -626,9 +660,6 @@ class MapsXmlParser:
             return csv_files
 
         else:
-            logging.warning('No annotations were found. Are the annotations in the correct place? They need to be in '
-                            'the top hierarchy of the highmag layer')
-
             return []
 
     @staticmethod

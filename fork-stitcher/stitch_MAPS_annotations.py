@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 import re
 import numpy as np
-from multiprocessing import Pool
+import multiprocessing
 import shutil
 
 import sites_of_interest_parser as sip
@@ -60,7 +60,7 @@ class Stitcher:
                             'total ssDNA RF	gaps', 'gaps', 'sister	gaps', 'parental', 'size gaps (nm)',
                             'junction ssDNA size (nm)', 'hemicatenane', 'termination intermediate', 'bubble',
                             'hemireplicated bubble', 'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
-                            'list for ssDNA at junction (nt)',
+                            'list for ssDNA at junction (nt)', 'Remarks',
                             ]
 
     def stitch_annotated_tiles(self, annotation_tiles: dict, stitch_threshold: int = 1000, eight_bit: bool = True):
@@ -378,7 +378,7 @@ class Stitcher:
             if regex.search(name):
                 annotation_csv_list.append(self.csv_base_path / name)
         if max_processes > 1:
-            with Pool(processes=max_processes) as pool:
+            with multiprocessing.Pool(processes=max_processes) as pool:
                 for annotation_csv_path in annotation_csv_list:
                     pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit, ))
 
