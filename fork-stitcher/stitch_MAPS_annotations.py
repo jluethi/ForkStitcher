@@ -63,7 +63,8 @@ class Stitcher:
                             'list for ssDNA at junction (nt)', 'Remarks',
                             ]
 
-    def stitch_annotated_tiles(self, annotation_tiles: dict, stitch_threshold: int = 1000, eight_bit: bool = True):
+    def stitch_annotated_tiles(self, annotation_tiles: dict, stitch_threshold: int = 1000, eight_bit: bool = True,
+                               show_arrow: bool = True):
         """Stitches 3x3 images for all annotations in annotation_tiles
 
         Goes through all annotations in annotation_tiles dict, load the center file and the existing surrounding files.
@@ -233,12 +234,17 @@ class Stitcher:
                 if eight_bit:
                     IJ.run(stitched_img, "8-bit", "")
 
-                # Convert it to an ImageJ2 dataset. It was an imageJ1 ImagePlus before and the save function can't
-                # handle that. See: https://github.com/imagej/pyimagej/issues/35
-                stitched_img_dataset = ij.py.to_dataset(stitched_img)
+                # Add an arrow pointing to the annotation
+                if show_arrow:
+                    ArrowTool = autoclass('fiji.util.ArrowTool')
+                    ArrowStyle = autoclass('fiji.util.ArrowShape$ArrowStyle')
+                    roi = ArrowTool.makeRoi(ArrowStyle.DELTA, stitched_coordinates[0] - 400, stitched_coordinates[1] + 400, stitched_coordinates[0] - 40, stitched_coordinates[1] + 40, 25.0, 50.0)
 
-                output_filename = annotation_name + '.png'
-                ij.io().save(stitched_img_dataset, str(self.output_path / output_filename))
+                    Color = autoclass('java.awt.Color')
+                    stitched_img.setOverlay(roi, Color.green, 50, Color.green)
+
+                output_filename = annotation_name + '.tiff'
+                IJ.saveAsTiff(stitched_img, str(self.output_path / output_filename))
 
                 stitched_img.close()
 

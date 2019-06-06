@@ -28,7 +28,7 @@ def main():
 
     # Parameters
     batch_size = 5
-    stitch_threshold = 1000
+    stitch_threshold = 2000
     highmag_layer = 'highmag'
     eight_bit = True
     max_processes = 1
