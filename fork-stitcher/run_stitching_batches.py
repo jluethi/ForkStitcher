@@ -8,7 +8,7 @@ from stitch_MAPS_annotations import Stitcher
 def main():
     # Paths
     base_path = '/Volumes/staff/zmbstaff/7831/Raw_Data/Group Lopes/Sebastian/Projects/'
-    project_name = '8330_siNeg_CPT_3rd'
+    project_name = '8384_1_siRad51C_CPT_3rd'
     # base_path = 'Z:\\zmbstaff\\7831\\Raw_Data\\Group Lopes\\Sebastian\\Projects\\'
     # project_name = '8330_siXRCC3_CPT_3rd_2ul'
     # project_name = '8384_1_siRad51C_CPT_3rd'
@@ -16,7 +16,7 @@ def main():
     # project_name = '8377'
     # highmag_layer = 'Array Tile Set 001'
 
-    csv_folder = 'annotation_csv_test'
+    csv_folder = 'annotation_test'
     output_folder = 'stitchedForks_test'
 
     # TODO: Make logging work on Windows and with multiprocessing
@@ -38,7 +38,7 @@ def main():
     stitcher = Stitcher(base_path, project_name, csv_folder, output_folder)
     stitcher.parse_create_csv_batches(batch_size=batch_size, highmag_layer=highmag_layer)
     stitcher.manage_batches(stitch_threshold, eight_bit, show_arrow=show_arrow, max_processes=max_processes)
-    stitcher.combine_csvs()
+    stitcher.combine_csvs(delete_batches=True, to_excel=True)
 
 
 if __name__ == "__main__":

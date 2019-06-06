@@ -4,6 +4,8 @@ import re
 import numpy as np
 import multiprocessing
 import shutil
+import pandas as pd
+from StyleFrame import StyleFrame, Styler
 
 import sites_of_interest_parser as sip
 import os
@@ -406,12 +408,14 @@ class Stitcher:
             for annotation_csv_path in annotation_csv_list:
                 self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit)
 
-    def combine_csvs(self, delete_batches: bool = False):
-        """Combines batch csv output files into the final csv file
+    def combine_csvs(self, delete_batches: bool = False, to_excel: bool = True):
+        """Combines batch csv output files into the final csv file and optionally an excel file
 
         Args:
             delete_batches (bool): Whether the batch csv files should be deleted after stitching them to the combined
                 csv file. Defaults to False (not deleting the batch csv files)
+            to_excel (bool): Whether the csv file should also be saved as an excel file. Defaults to True (creating the
+                Excel file)
 
         """
         items = os.listdir(self.csv_base_path)
@@ -433,3 +437,22 @@ class Stitcher:
         if delete_batches:
             for name in items:
                 os.remove(self.csv_base_path / name)
+
+        if to_excel:
+            print('Saving the annotations csv as an excel file')
+            data_frame = pd.read_csv(csv_output_path)
+            excel_output_path = self.csv_base_path / (self.project_name + '_fused' + '.xlsx')
+
+            # Create a list of headers whose column should be expanded to fit the content
+            fitting_headers = list(data_frame.columns.values)
+            non_fitting_headers = ['img_path', 'surrounding_tile_names', 'surrounding_tile_exists']
+            for header in non_fitting_headers:
+                if header in fitting_headers:
+                    fitting_headers.remove(header)
+
+            no_wrap_text_style = Styler(wrap_text=False, shrink_to_fit=False)
+            excel_writer = StyleFrame.ExcelWriter(excel_output_path)
+            styled_df = StyleFrame(data_frame, styler_obj=no_wrap_text_style)
+            styled_df.to_excel(excel_writer, 'MapsAnnotations', index=False, columns_and_rows_to_freeze='A1',
+                               best_fit=fitting_headers)
+            excel_writer.save()
