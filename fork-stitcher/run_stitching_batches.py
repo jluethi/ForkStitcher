@@ -32,11 +32,12 @@ def main():
     highmag_layer = 'highmag'
     eight_bit = True
     max_processes = 1
+    show_arrow = True
 
     # Parse and save the metadata
     stitcher = Stitcher(base_path, project_name, csv_folder, output_folder)
     stitcher.parse_create_csv_batches(batch_size=batch_size, highmag_layer=highmag_layer)
-    stitcher.manage_batches(stitch_threshold, eight_bit, max_processes=max_processes)
+    stitcher.manage_batches(stitch_threshold, eight_bit, show_arrow=show_arrow, max_processes=max_processes)
     stitcher.combine_csvs()
 
 

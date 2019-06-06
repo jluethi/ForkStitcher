@@ -84,6 +84,8 @@ class Stitcher:
                 threshold, the stitching is not performed
             eight_bit (bool): Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
                 images as 8bit
+            show_arrow (bool): Whether an arrow should be added to the image overlay that points to the annotation in
+                the stitched image. Defaults to True, thus adding an arrow to the overlay
 
         Returns:
             dict: annotation_tiles, now includes information about the position of the annotation in the stitched image
@@ -238,11 +240,15 @@ class Stitcher:
                 if show_arrow:
                     ArrowTool = autoclass('fiji.util.ArrowTool')
                     ArrowStyle = autoclass('fiji.util.ArrowShape$ArrowStyle')
-                    roi = ArrowTool.makeRoi(ArrowStyle.DELTA, stitched_coordinates[0] - 400, stitched_coordinates[1] + 400, stitched_coordinates[0] - 40, stitched_coordinates[1] + 40, 25.0, 50.0)
+                    roi = ArrowTool.makeRoi(ArrowStyle.DELTA, stitched_coordinates[0] - 400, stitched_coordinates[1]
+                                            + 400, stitched_coordinates[0] - 40, stitched_coordinates[1] + 40,
+                                            25.0, 50.0)
 
                     Color = autoclass('java.awt.Color')
                     stitched_img.setOverlay(roi, Color.green, 50, Color.green)
 
+                # Saving the ImagePlus directly as Tiff, without converting to ImageJ2 Dataset or converting to PNG,
+                # as both of those interfere with displaying the overlay arrow
                 output_filename = annotation_name + '.tiff'
                 IJ.saveAsTiff(stitched_img, str(self.output_path / output_filename))
 
@@ -339,7 +345,8 @@ class Stitcher:
 
         return [annotation_tiles, annotation_csvs]
 
-    def stitch_batch(self, annotation_csv_path, stitch_threshold: int = 1000, eight_bit: bool = True):
+    def stitch_batch(self, annotation_csv_path, stitch_threshold: int = 1000, eight_bit: bool = True,
+                     show_arrow: bool = True):
         """Submits the stitching of a batch, the writing of an updated csv file and the deletion of the old csv file
 
         Args:
@@ -348,6 +355,8 @@ class Stitcher:
                 threshold, the stitching is not performed
             eight_bit (bool): Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
                 images as 8bit
+            show_arrow (bool): Whether an arrow should be added to the image overlay that points to the annotation in
+                the stitched image. Defaults to True, thus adding an arrow to the overlay
 
         """
         # Check if a folder for the stitched forks already exists. If not, create that folder
@@ -356,13 +365,14 @@ class Stitcher:
 
         stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded,
                                                                 stitch_threshold=stitch_threshold,
-                                                                eight_bit=eight_bit)
+                                                                eight_bit=eight_bit, show_arrow=show_arrow)
         csv_stitched_path = Path(str(annotation_csv_path)[:-4] + '_stitched.csv')
 
         sip.MapsXmlParser.save_annotation_tiles_to_csv(stitched_annotation_tiles, self.base_header, csv_stitched_path)
         os.remove(str(annotation_csv_path))
 
-    def manage_batches(self, stitch_threshold: int = 1000, eight_bit: bool = True, max_processes: int = 4):
+    def manage_batches(self, stitch_threshold: int = 1000, eight_bit: bool = True, show_arrow: bool = True,
+                       max_processes: int = 4):
         """Manages the parallelization of the stitching of batches
 
         As multiprocessing can make some issues, if max_processes is set to 1, it does not use multiprocessing calls.
@@ -372,6 +382,8 @@ class Stitcher:
                 threshold, the stitching is not performed
             eight_bit (bool): Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
                 images as 8bit
+            show_arrow (bool): Whether an arrow should be added to the image overlay that points to the annotation in
+                the stitched image. Defaults to True, thus adding an arrow to the overlay
             max_processes (int): The number of parallel processes that should be used to process the batches.
                 Be careful, each batch needs a lot of memory
 
@@ -386,7 +398,7 @@ class Stitcher:
         if max_processes > 1:
             with multiprocessing.Pool(processes=max_processes) as pool:
                 for annotation_csv_path in annotation_csv_list:
-                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit, ))
+                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit, show_arrow, ))
 
                 pool.close()
                 pool.join()

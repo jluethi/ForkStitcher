@@ -75,6 +75,8 @@ class Gui:
         tk.Checkbutton(master, text='Continue Processing an Experiment', variable=self.continue_processing).\
             grid(row=8, column=1)
 
+        # TODO: Add an option to switch between showing and not showing the arrow in the overlay
+
 
         # Add a "continue existing processing" Button
 
