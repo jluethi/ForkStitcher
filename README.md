@@ -32,6 +32,7 @@ pip install .
 ```
 
 4. Directly call code from within a python script or start the user interfaces by running the gui.py script.
+**Warning: When importing stitch_MAPS_annotations for the first time, it takes a while (minutes) to get the ImageJ Fiji distribution from Maven. It doesn't print anything during that, just wait for it to get the ImageJ distribution.** On later runs, it takes a few seconds to initialize the ImageJ environment
 
 Documentation
 ----------
