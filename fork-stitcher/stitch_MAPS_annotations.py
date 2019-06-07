@@ -113,6 +113,7 @@ class Stitcher:
             # TODO: Test if converting to 8bit when loading improves overall performance
             for i, neighbor in enumerate(annotation_tiles[annotation_name]['surrounding_tile_names']):
                 if annotation_tiles[annotation_name]['surrounding_tile_exists'][i]:
+                    # TODO: Directly load as ImagePlus: image_plus_img = IJ.openImage(str(img_path))
                     imagej2_img = ij.io().open(str(img_path / neighbor))
                     imps.append(ij.convert().convert(imagej2_img, image_plus_class))
             java_imgs = ij.py.to_java(imps)
@@ -317,6 +318,75 @@ class Stitcher:
                             'starting positions: {}.'.format(stitch_threshold, stitch_shift))
 
         return [good_stitching, stitched_annotation_coordinates.astype(int)]
+
+    @staticmethod
+    def local_contrast_enhancement(img_path, output_path, save_img: bool = True, eight_bit: bool = True,
+                                   use_norm_local_contrast: bool = False, use_CLAHE: bool = False,
+                                   return_image: bool = True, **kwargs):
+        """Loads an image and performs local contrast enhancement
+
+        Loads the specified image, performs either NormalizeLocalContrast (default), CLAHE or no local contrast
+        enhancement (in that order, thus performs NormalizeLocalContrast if both it and CLAHE are True).
+        Optionally converts the image to 8bit and saves it. The parameters for NormalizeLocalContrast and
+        CLAHE have default values that can be overwritten using the **kwargs by providing an argument with the specific
+        name of the parameter to be changed
+
+        Args:
+            img_path (Path or str): Full path to the image to be processed
+            output_path (Path or str): Full path to where the output image should be saved (if save_img is True)
+            save_img (bool): Whether the processed image should be saved. Defaults to True (saving the image)
+            eight_bit (bool): Whether the image should be converted to 8 bit . Defaults to True (converting to 8 bit)
+            use_norm_local_contrast (bool): Whether NormalizeLocalContrast Fiji Plugin should be run on the image.
+                Defaults to False (not running NormalizeLocalContrast on the image)
+            use_CLAHE (bool): Whether CLAHE Fiji Plugin should be run on the image. Defaults to False (not running
+                CLAHE on the image)
+            return_image (bool): Whether the function should return the image or close it in ImageJ so that it is sent
+                to Garbage Collection and the memory is freed up again.
+
+        Returns:
+            ImagePlus: The processed image as an ImageJ1 ImagePlus image (if return_image is True)
+
+                """
+        from jnius import autoclass
+        IJ = autoclass('ij.IJ')
+
+        image_plus_img = IJ.openImage(str(img_path))
+
+        if use_norm_local_contrast:
+            logging.debug('Loading {} and performing NormalizeLocalContrast on it'.format(img_path))
+            NormLocalContrast = autoclass('mpicbg.ij.plugin.NormalizeLocalContrast')
+            brx = kwargs.get('brx', 300)
+            bry = kwargs.get('bry', 300)
+            stds = kwargs.get('stds', 4)
+            center = kwargs.get('cent', True)
+            stretch = kwargs.get('stret', True)
+
+            NormLocalContrast.run(image_plus_img.getChannelProcessor(), brx, bry, stds, center, stretch)
+
+        elif use_CLAHE:
+            logging.debug('Loading {} and performing CLAHE on it'.format(img_path))
+            Flat = autoclass('mpicbg.ij.clahe.Flat')
+            blockRadius = kwargs.get('blockRadius', 63)
+            bins = kwargs.get('bins', 255)
+            slope = kwargs.get('slope', 3)
+            mask = kwargs.get('mask', None)
+            composite = kwargs.get('composite', False)
+
+            Flat.getFastInstance().run(image_plus_img, blockRadius, bins, slope, mask, composite)
+
+        else:
+            logging.debug('Loading {}. Not performing any contrast enhancements'.format(img_path))
+
+        if eight_bit:
+            IJ.run(image_plus_img, "8-bit", "")
+        if save_img:
+            IJ.saveAsTiff(image_plus_img, str(output_path))
+
+        if return_image:
+            return image_plus_img
+        else:
+            image_plus_img.close()
+            return
 
     def parse_create_csv_batches(self, batch_size: int, highmag_layer: str = 'highmag'):
         """Creates the batch csv files of annotation_tiles
