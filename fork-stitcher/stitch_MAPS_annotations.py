@@ -12,6 +12,10 @@ import os
 
 import imagej
 
+# Using lower level ImageJ APIs to do the stitching. Avoiding calling ImageJ1 plugins allows to use a maven
+# distribution of ImageJ and makes this parallelizable as no temporary files are written and read anymore.
+# See here: https://github.com/imagej/pyimagej/issues/35
+# https://forum.image.sc/t/using-imagej-functions-like-type-conversion-and-setting-pixel-size-via-pyimagej/25755/10
 ij = imagej.init('sc.fiji:fiji:2.0.0-pre-10+ch.fmi:faim-ij2-visiview-processing:0.0.1')
 
 
@@ -66,7 +70,7 @@ class Stitcher:
                             ]
 
     def stitch_annotated_tiles(self, annotation_tiles: dict, stitch_threshold: int = 1000, eight_bit: bool = True,
-                               show_arrow: bool = True):
+                               show_arrow: bool = True, enhance_contrast: bool = True):
         """Stitches 3x3 images for all annotations in annotation_tiles
 
         Goes through all annotations in annotation_tiles dict, load the center file and the existing surrounding files.
@@ -88,34 +92,28 @@ class Stitcher:
                 images as 8bit
             show_arrow (bool): Whether an arrow should be added to the image overlay that points to the annotation in
                 the stitched image. Defaults to True, thus adding an arrow to the overlay
+            enhance_contrast (bool): Whether contrast enhancement should be performed on the images before stitching.
+                Defaults to True (thus enhancing contrast in the images)
 
         Returns:
             dict: annotation_tiles, now includes information about the position of the annotation in the stitched image
 
         """
-        # This function takes the parser object containing all the information about the MAPS project and its
-        # annotations. It performs the stitching.
+        from jnius import autoclass
 
         for annotation_name in annotation_tiles:
             number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
             logging.info('Stitching {}'.format(annotation_name))
             img_path = annotation_tiles[annotation_name]['img_path']
 
-            # Uses lower level ImageJ APIs to do the stitching. Avoiding calling ImageJ1 plugins allows to use a maven
-            # distribution of ImageJ and makes this parallelizable as no temporary files are written and read anymore.
-            # See here: https://github.com/imagej/pyimagej/issues/35
-            # https://forum.image.sc/t/using-imagej-functions-like-type-conversion-and-setting-pixel-size-via-pyimagej/25755/10
-
-            from jnius import autoclass
-            image_plus_class = autoclass('ij.ImagePlus')
             imps = []
 
-            # TODO: Test if converting to 8bit when loading improves overall performance
             for i, neighbor in enumerate(annotation_tiles[annotation_name]['surrounding_tile_names']):
                 if annotation_tiles[annotation_name]['surrounding_tile_exists'][i]:
-                    # TODO: Directly load as ImagePlus: image_plus_img = IJ.openImage(str(img_path))
-                    imagej2_img = ij.io().open(str(img_path / neighbor))
-                    imps.append(ij.convert().convert(imagej2_img, image_plus_class))
+                    imps.append(self.local_contrast_enhancement(str(img_path / neighbor), '', save_img=False,
+                                                                eight_bit=eight_bit,
+                                                                use_norm_local_contrast=enhance_contrast,
+                                                                return_image=True, center=True))
             java_imgs = ij.py.to_java(imps)
 
             # Define starting positions based on what neighbor tiles exist
@@ -418,7 +416,7 @@ class Stitcher:
         return [annotation_tiles, annotation_csvs]
 
     def stitch_batch(self, annotation_csv_path, stitch_threshold: int = 1000, eight_bit: bool = True,
-                     show_arrow: bool = True):
+                     show_arrow: bool = True, enhance_contrast: bool = True):
         """Submits the stitching of a batch, the writing of an updated csv file and the deletion of the old csv file
 
         Args:
@@ -429,6 +427,8 @@ class Stitcher:
                 images as 8bit
             show_arrow (bool): Whether an arrow should be added to the image overlay that points to the annotation in
                 the stitched image. Defaults to True, thus adding an arrow to the overlay
+            enhance_contrast (bool): Whether contrast enhancement should be performed on the images before stitching.
+                Defaults to True (thus enhancing contrast in the images)
 
         """
         # Check if a folder for the stitched forks already exists. If not, create that folder
@@ -437,14 +437,15 @@ class Stitcher:
 
         stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded,
                                                                 stitch_threshold=stitch_threshold,
-                                                                eight_bit=eight_bit, show_arrow=show_arrow)
+                                                                eight_bit=eight_bit, show_arrow=show_arrow,
+                                                                enhance_contrast=enhance_contrast)
         csv_stitched_path = Path(str(annotation_csv_path)[:-4] + '_stitched.csv')
 
         sip.MapsXmlParser.save_annotation_tiles_to_csv(stitched_annotation_tiles, self.base_header, csv_stitched_path)
         os.remove(str(annotation_csv_path))
 
     def manage_batches(self, stitch_threshold: int = 1000, eight_bit: bool = True, show_arrow: bool = True,
-                       max_processes: int = 4):
+                       max_processes: int = 4, enhance_contrast: bool = True):
         """Manages the parallelization of the stitching of batches
 
         As multiprocessing can make some issues, if max_processes is set to 1, it does not use multiprocessing calls.
@@ -458,6 +459,8 @@ class Stitcher:
                 the stitched image. Defaults to True, thus adding an arrow to the overlay
             max_processes (int): The number of parallel processes that should be used to process the batches.
                 Be careful, each batch needs a lot of memory
+            enhance_contrast (bool): Whether contrast enhancement should be performed on the images before stitching.
+                Defaults to True (thus enhancing contrast in the images)
 
         """
         # Populate annotation_csv_list by looking at csv files in directory
@@ -470,7 +473,8 @@ class Stitcher:
         if max_processes > 1:
             with multiprocessing.Pool(processes=max_processes) as pool:
                 for annotation_csv_path in annotation_csv_list:
-                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit, show_arrow, ))
+                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit,
+                                                              show_arrow, enhance_contrast, ))
 
                 pool.close()
                 pool.join()
