@@ -33,69 +33,75 @@ class Gui:
 
         file_picker_label = tk.Label(master, text='Project Folder')
         self.project_path = tk.StringVar()
-        self.file_picker_entry = tk.Entry(master, textvariable=self.project_path)
+        self.file_picker_entry = tk.Entry(master, textvariable=self.project_path, width=30)
         file_picker_button = tk.Button(master, text='Choose Directory', command=self.ask_for_path)
 
         file_picker_label.grid(row=0, column=0, sticky=tk.E)
-        self.file_picker_entry.grid(row=0, column=1)
-        file_picker_button.grid(row=0, column=2)
+        self.file_picker_entry.grid(row=0, column=1, sticky=tk.W)
+        file_picker_button.grid(row=0, column=2, sticky=tk.W)
 
         # Advanced options in a dropdown
         self.max_processes = tk.IntVar()
         tk.Label(master, text='Number of parallel processes').grid(row=1, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.max_processes).grid(row=1, column=1)
+        tk.Entry(master, textvariable=self.max_processes).grid(row=1, column=1, sticky=tk.W)
 
         # TODO: Find out how to hide some options by default
         # Advanced options in a dropdown
-        # Boolean for whether output should be saved as 8bit images
-        self.eight_bit = tk.BooleanVar()
-        tk.Checkbutton(master, text='8 bit output', variable=self.eight_bit).grid(row=2, column=1)
-
         self.batch_size = tk.IntVar()
-        tk.Label(master, text='Batch size').grid(row=3, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.batch_size).grid(row=3, column=1)
+        tk.Label(master, text='Batch size').grid(row=2, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.batch_size).grid(row=2, column=1, sticky=tk.W)
 
         self.csv_folder_name = tk.StringVar()
-        tk.Label(master, text='CSV folder name').grid(row=4, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.csv_folder_name).grid(row=4, column=1)
+        tk.Label(master, text='CSV folder name').grid(row=3, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.csv_folder_name).grid(row=3, column=1, sticky=tk.W)
 
         self.output_folder = tk.StringVar()
-        tk.Label(master, text='Stitched images folder name').grid(row=5, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.output_folder).grid(row=5, column=1)
+        tk.Label(master, text='Stitched images folder name').grid(row=4, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.output_folder).grid(row=4, column=1, sticky=tk.W)
 
         self.highmag_layer = tk.StringVar()
-        tk.Label(master, text='High magnification layer').grid(row=6, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.highmag_layer).grid(row=6, column=1)
+        tk.Label(master, text='High magnification layer').grid(row=5, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.highmag_layer).grid(row=5, column=1, sticky=tk.W)
 
         self.stitch_threshold = tk.IntVar()
-        tk.Label(master, text='Stitch Threshold').grid(row=7, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.stitch_threshold).grid(row=7, column=1)
+        tk.Label(master, text='Stitch Threshold').grid(row=6, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.stitch_threshold).grid(row=6, column=1, sticky=tk.W)
+
+        self.eight_bit = tk.BooleanVar()
+        tk.Checkbutton(master, text='8 bit output', variable=self.eight_bit).grid(row=7, column=1, sticky=tk.W)
+
+        self.arrow_overlay = tk.BooleanVar()
+        tk.Checkbutton(master, text='Add an arrow overlay that points to the fork', variable=self.arrow_overlay). \
+            grid(row=8, column=1, sticky=tk.W)
+
+        self.contrast_enhance = tk.BooleanVar()
+        tk.Checkbutton(master, text='Produce contrast enhanced images', variable=self.contrast_enhance). \
+            grid(row=9, column=1, sticky=tk.W)
 
         self.continue_processing = tk.BooleanVar()
         tk.Checkbutton(master, text='Continue Processing an Experiment', variable=self.continue_processing).\
-            grid(row=8, column=1)
-
-        # TODO: Add an option to switch between showing and not showing the arrow in the overlay
-
+            grid(row=10, column=1, sticky=tk.W)
 
         # Add a "continue existing processing" Button
 
         # Run button
-        self.run_button = tk.Button(master, text='Run', fg='red', command=self.run)
-        self.run_button.grid(row=10, column=1)
+        self.run_button = tk.Button(master, text='Run', fg='red', command=self.run, width=20)
+        self.run_button.grid(row=11, column=2, sticky=tk.W)
 
         # Stop button (available during run)
         self.reset_parameters()
 
     def reset_parameters(self):
         self.project_path.set('')
-        self.max_processes.set(1)
+        self.max_processes.set(4)
         self.eight_bit.set(True)
         self.batch_size.set(5)
         self.output_folder.set('stitchedForks_test')
         self.csv_folder_name.set('annotation_csv_tests')
         self.highmag_layer.set('highmag')
         self.stitch_threshold.set(1000)
+        self.arrow_overlay.set(True)
+        self.contrast_enhance.set(True)
         self.continue_processing.set(False)
 
     def run(self):
@@ -103,7 +109,6 @@ class Gui:
         base_path = project_dir.parent
         project_name = project_dir.name
 
-        # TODO: Check if all parameters are set:
         params_set = self.check_all_parameters_set()
         if params_set and not self.continue_processing.get():
             logging.info('Process experiment {}'.format(project_name))
@@ -130,14 +135,14 @@ class Gui:
     #     # TODO: Catch issues when wrong path is provided or another error/warning occurs in the stitcher => catch my custom Exception, display it to the user
     #     stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
     #     stitcher.parse_create_csv_batches(batch_size=self.batch_size.get(), highmag_layer=self.highmag_layer.get())
-    #     stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(),
-    #                             max_processes=self.max_processes.get())
+    #     stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
+    #                             max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
     #     stitcher.combine_csvs(delete_batches=True)
     #
     # def continue_run(self, base_path, project_name):
     #     stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
-    #     stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(),
-    #                             max_processes=self.max_processes.get())
+    #     stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
+    #                             max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
     #     stitcher.combine_csvs(delete_batches=True)
 
     def dummy(self, iterations):

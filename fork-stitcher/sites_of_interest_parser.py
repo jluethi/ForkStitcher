@@ -200,6 +200,7 @@ class MapsXmlParser:
             raise XmlParsingFailed('Parsing the XML File did not find any tiles (images). Therefore, cannot map '
                                    'annotations')
 
+        # TODO: Add option not to parse annotations and thus not to raise an exception (for classifier)
         if not self.annotations:
             raise XmlParsingFailed('No annotations were found on tiles. Are there annotations in the MAPS project? '
                                    'Are those annotations on the highmag tiles? If so, there may be an issue with the '
