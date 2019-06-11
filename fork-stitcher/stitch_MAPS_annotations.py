@@ -69,7 +69,7 @@ class Stitcher:
                             'list for ssDNA at junction (nt)', 'Remarks',
                             ]
 
-    def stitch_annotated_tiles(self, annotation_tiles: dict, stitch_threshold: int = 1000, eight_bit: bool = True,
+    def stitch_annotated_tiles(self, annotation_tiles: dict, logger, stitch_threshold: int = 1000, eight_bit: bool = True,
                                show_arrow: bool = True, enhance_contrast: bool = True):
         """Stitches 3x3 images for all annotations in annotation_tiles
 
@@ -86,6 +86,8 @@ class Stitcher:
                 details. Needs to contain img_path, pixel_size, Annotation_tile_img_position_x,
                 Annotation_tile_img_position_y, surrounding_tile_names & surrounding_tile_exists for this function
                 to work
+            logger (Logging): Logging object that is configured for the logging either in multiprocessing or normal
+                processing
             stitch_threshold (int): Threshold to judge stitching quality by. If images would be moved more than this
                 threshold, the stitching is not performed
             eight_bit (bool): Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
@@ -103,14 +105,15 @@ class Stitcher:
 
         for annotation_name in annotation_tiles:
             number_existing_neighbor_tiles = sum(annotation_tiles[annotation_name]['surrounding_tile_exists'])
-            logging.info('Stitching {}'.format(annotation_name))
+
+            logger.info('Stitching {}'.format(annotation_name))
             img_path = annotation_tiles[annotation_name]['img_path']
 
             imps = []
 
             for i, neighbor in enumerate(annotation_tiles[annotation_name]['surrounding_tile_names']):
                 if annotation_tiles[annotation_name]['surrounding_tile_exists'][i]:
-                    imps.append(self.local_contrast_enhancement(str(img_path / neighbor), '', save_img=False,
+                    imps.append(self.local_contrast_enhancement(str(img_path / neighbor), '', logger, save_img=False,
                                                                 eight_bit=eight_bit,
                                                                 use_norm_local_contrast=enhance_contrast,
                                                                 return_image=True, center=True))
@@ -162,7 +165,7 @@ class Stitcher:
                                                                                       True, False, True, True]:
                     center_index = 0
                 else:
-                    logging.warning('Not stitching fork {}, because there is no rectangle of images to stitch. '
+                    logger.warning('Not stitching fork {}, because there is no rectangle of images to stitch. '
                                     'This stitching function is only made for 3x3, 2x3, 3x2 and 2x2 stitching. '
                                     'Those tiles do exist: {}'.format(annotation_name,
                                                                       annotation_tiles[annotation_name]
@@ -174,7 +177,7 @@ class Stitcher:
                     break
 
             else:
-                logging.warning('Not stitching fork {}, because there is no rectangle of images to stitch. '
+                logger.warning('Not stitching fork {}, because there is no rectangle of images to stitch. '
                                 'This stitching function is only made for 3x3, 2x3, 3x2 and 2x2 stitching. '
                                 'Those tiles do exist: {}'.format(annotation_name, annotation_tiles[annotation_name]
                                                                   ['surrounding_tile_exists']))
@@ -207,7 +210,8 @@ class Stitcher:
             [perform_stitching, stitched_coordinates] = self.process_stitching_params(stitching_params,
                                                                                       original_annotation_coord,
                                                                                       stitch_threshold,
-                                                                                      original_positions, center_index)
+                                                                                      original_positions, center_index,
+                                                                                      logger)
 
             # If the calculate stitching is reasonable, perform the stitching. Otherwise, log a warning
             if perform_stitching:
@@ -256,7 +260,7 @@ class Stitcher:
                 stitched_img.close()
 
             else:
-                logging.warning('Not stitching fork {}, because the stitching calculations displaced the images more '
+                logger.warning('Not stitching fork {}, because the stitching calculations displaced the images more '
                                 'than {} pixels. Instead, just copying the center image to the target folder'
                                 .format(annotation_name, stitch_threshold))
                 center_file_path = Path(img_path) / annotation_tiles[annotation_name]['surrounding_tile_names'][4]
@@ -281,7 +285,7 @@ class Stitcher:
 
     @staticmethod
     def process_stitching_params(stitch_params, annotation_coordinates, stitch_threshold, original_positions,
-                                 center_index: int):
+                                 center_index: int, logger):
         """Calculates the position of the annotation in the stitched image and decides if stitching worked well
 
         Based on the stitch_threshold, this function decides whether the stitching has worked well. If any image was
@@ -295,6 +299,8 @@ class Stitcher:
                 calculate the shift by stitching
             center_index (int): Index of which tile in the stitched image was the original center. Used to calculate
                 the position of the annotation in the stitched image
+            logger (Logging): Logging object that is configured for the logging either in multiprocessing or normal
+                processing
 
         Returns:
             list: First value is a bool that informs whether the stitching should be done. Second value is an array with
@@ -315,14 +321,14 @@ class Stitcher:
             good_stitching = True
         else:
             good_stitching = False
-            logging.warning('Current stitching moves images more than the threshold of {}. '
+            logger.warning('Current stitching moves images more than the threshold of {}. '
                             'The stitching calculated the following image displacements from their '
                             'starting positions: {}.'.format(stitch_threshold, stitch_shift))
 
         return [good_stitching, stitched_annotation_coordinates.astype(int)]
 
     @staticmethod
-    def local_contrast_enhancement(img_path, output_path, save_img: bool = True, eight_bit: bool = True,
+    def local_contrast_enhancement(img_path, output_path, logger, save_img: bool = True, eight_bit: bool = True,
                                    use_norm_local_contrast: bool = False, use_CLAHE: bool = False,
                                    return_image: bool = True, **kwargs):
         """Loads an image and performs local contrast enhancement
@@ -336,6 +342,8 @@ class Stitcher:
         Args:
             img_path (Path or str): Full path to the image to be processed
             output_path (Path or str): Full path to where the output image should be saved (if save_img is True)
+            logger (Logging): Logging object that is configured for the logging either in multiprocessing or normal
+                processing
             save_img (bool): Whether the processed image should be saved. Defaults to True (saving the image)
             eight_bit (bool): Whether the image should be converted to 8 bit . Defaults to True (converting to 8 bit)
             use_norm_local_contrast (bool): Whether NormalizeLocalContrast Fiji Plugin should be run on the image.
@@ -355,7 +363,7 @@ class Stitcher:
         image_plus_img = IJ.openImage(str(img_path))
 
         if use_norm_local_contrast:
-            logging.debug('Loading {} and performing NormalizeLocalContrast on it'.format(img_path))
+            logger.debug('Loading {} and performing NormalizeLocalContrast on it'.format(img_path))
             NormLocalContrast = autoclass('mpicbg.ij.plugin.NormalizeLocalContrast')
             brx = kwargs.get('brx', 300)
             bry = kwargs.get('bry', 300)
@@ -366,7 +374,7 @@ class Stitcher:
             NormLocalContrast.run(image_plus_img.getChannelProcessor(), brx, bry, stds, center, stretch)
 
         elif use_CLAHE:
-            logging.debug('Loading {} and performing CLAHE on it'.format(img_path))
+            logger.debug('Loading {} and performing CLAHE on it'.format(img_path))
             Flat = autoclass('mpicbg.ij.clahe.Flat')
             blockRadius = kwargs.get('blockRadius', 63)
             bins = kwargs.get('bins', 255)
@@ -377,7 +385,7 @@ class Stitcher:
             Flat.getFastInstance().run(image_plus_img, blockRadius, bins, slope, mask, composite)
 
         else:
-            logging.debug('Loading {}. Not performing any contrast enhancements'.format(img_path))
+            logger.debug('Loading {}. Not performing any contrast enhancements'.format(img_path))
 
         if eight_bit:
             IJ.run(image_plus_img, "8-bit", "")
@@ -450,8 +458,7 @@ class Stitcher:
 
         return [annotation_tiles, annotation_csvs]
 
-
-    def stitch_batch(self, annotation_csv_path, stitch_threshold: int = 1000, eight_bit: bool = True,
+    def stitch_batch(self, annotation_csv_path, logger, stitch_threshold: int = 1000, eight_bit: bool = True,
                      show_arrow: bool = True, enhance_contrast: bool = True):
         """Submits the stitching of a batch, the writing of an updated csv file and the deletion of the old csv file
 
@@ -471,7 +478,7 @@ class Stitcher:
         os.makedirs(str(self.output_path), exist_ok=True)
         annotation_tiles_loaded = sip.MapsXmlParser.load_annotations_from_csv(self.base_header, annotation_csv_path)
 
-        stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded,
+        stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded, logger=logger,
                                                                 stitch_threshold=stitch_threshold,
                                                                 eight_bit=eight_bit, show_arrow=show_arrow,
                                                                 enhance_contrast=enhance_contrast)
@@ -507,16 +514,21 @@ class Stitcher:
             if regex.search(name):
                 annotation_csv_list.append(self.csv_base_path / name)
         if max_processes > 1:
+            _logger = multiprocessing.get_logger()
+            _logger.setLevel(logging.INFO)
+            _logger.propagate = True
             with multiprocessing.Pool(processes=max_processes) as pool:
                 for annotation_csv_path in annotation_csv_list:
-                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit,
+                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, _logger, stitch_threshold, eight_bit,
                                                               show_arrow, enhance_contrast, ))
 
                 pool.close()
                 pool.join()
         else:
+            _logger = logging.getLogger(__name__)
             for annotation_csv_path in annotation_csv_list:
-                self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit)
+                self.stitch_batch(annotation_csv_path, _logger, stitch_threshold, eight_bit, show_arrow,
+                                  enhance_contrast)
 
     def combine_csvs(self, delete_batches: bool = False, to_excel: bool = True):
         """Combines batch csv output files into the final csv file and optionally an excel file
