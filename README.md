@@ -23,9 +23,9 @@ conda install -n fork_stitcher pyyaml
 pip install StyleFrame
 ```
 
-3. To ensure logging works, either wait until the bug in [jgo](https://github.com/scijava/jgo/pull/39) is fixed or locally install this forked version with the fix to the logging preferences:
+3. To ensure logging works, either wait until the bug fix in [jgo](https://github.com/scijava/jgo/pull/39) is released in a new version of jgo or locally install the master with the fix to the logging preferences:
 ```
-git clone https://github.com/jluethi/jgo
+git clone https://github.com/scijava/jgo
 cd jgo
 pip uninstall jgo
 pip install .
