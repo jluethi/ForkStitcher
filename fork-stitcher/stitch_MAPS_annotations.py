@@ -262,6 +262,10 @@ class Stitcher:
                 center_file_path = Path(img_path) / annotation_tiles[annotation_name]['surrounding_tile_names'][4]
                 output_filename = self.output_path / (annotation_name + '_StitchingFailed_centerOnly.tiff')
                 shutil.copy(center_file_path, output_filename)
+                # Save the original positions to the file. Otherwise, the csv files have missing entries which can lead
+                # to issues.
+                annotation_tiles[annotation_name]['annotation_position_x'] = annotation_tiles[annotation_name]['Annotation_tile_img_position_x']
+                annotation_tiles[annotation_name]['annotation_position_y'] = annotation_tiles[annotation_name]['Annotation_tile_img_position_y']
 
             # Close any open images to free up RAM. Otherwise, get an OutOfMemory Exception after a few rounds
             # ij.getContext().dispose()
