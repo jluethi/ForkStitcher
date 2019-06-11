@@ -3,6 +3,8 @@
 
 import xml.etree.ElementTree as ET
 import sys
+import csv
+import ast
 import numpy as np
 import pandas as pd
 import math
@@ -174,11 +176,16 @@ class MapsXmlParser:
         """
         folders = img_path.split('\\')
         path = self.project_folder_path
-        for folder in folders[2:]:
+        try:
+            layersdata_index = folders.index('LayersData')
+        except ValueError:
+            raise XmlParsingFailed('Could not find the folder LayersData that should contain the raw data in the '
+                                   'filepath for the iamge_files: {}'.format(img_path))
+        for folder in folders[layersdata_index:]:
             path = path / folder
         return path
 
-    def extract_layers_and_annotations(self):
+    def extract_layers_and_annotations(self, check_for_annotations: bool = True):
         """Extract the information about all the layers in the high magnification acquisition layers and the annotations
 
         Go through the XML file and submit all LayerGroups for processing. The LayerGroups contain both the Layer with
@@ -186,6 +193,10 @@ class MapsXmlParser:
         At the end of processing, check whether the self.layers and the self.annotations dictionaries were filled. If
         one of them was not filled, the parser could not find the highmag images or the annotations and raises an
         exception.
+
+        Args:
+            check_for_annotations(bool): Whether the parsing should check for the existence of annotations and throw an
+                error if none are found. Defaults to True, thus checking for annotations.
 
         """
         # Extract the information about all the layers (high magnification acquisition layers)
@@ -200,8 +211,7 @@ class MapsXmlParser:
             raise XmlParsingFailed('Parsing the XML File did not find any tiles (images). Therefore, cannot map '
                                    'annotations')
 
-        # TODO: Add option not to parse annotations and thus not to raise an exception (for classifier)
-        if not self.annotations:
+        if check_for_annotations and not self.annotations:
             raise XmlParsingFailed('No annotations were found on tiles. Are there annotations in the MAPS project? '
                                    'Are those annotations on the highmag tiles? If so, there may be an issue with the '
                                    'calculation of the positions of the annotations. Check whether '
@@ -261,7 +271,7 @@ class MapsXmlParser:
 
         """
         layer_type = layer.attrib['{http://www.w3.org/2001/XMLSchema-instance}type']
-        assert(layer_type == 'TileLayer')
+        assert (layer_type == 'TileLayer')
         for layer_content in layer:
             if layer_content.tag.endswith('metaDataLocation'):
                 metadata_location = layer_content.text
@@ -405,7 +415,8 @@ class MapsXmlParser:
                                                         # noinspection PyUnboundLocalVariable
                                                         tile_name = current_layer + '_' + value.text
                                                         self.tiles[tile_name] = {'layers': metadata_location,
-                                                                                 'img_path': self.convert_img_path_to_local_path(tile_image_folder_path),
+                                                                                 'img_path': self.convert_img_path_to_local_path(
+                                                                                     tile_image_folder_path),
                                                                                  'filename': value.text,
                                                                                  'layer_name': current_layer}
 
@@ -475,9 +486,9 @@ class MapsXmlParser:
                     # absolute_tile_pos is the position of the corner of the tile in absolute Stage Position
                     # coordinates, the tile_center_stage_position are the Stage Position coordinates of the tile
                     absolute_tile_pos = relative_0 + current_tile['RelativeTilePosition_x'] * relative_x_stepsize + \
-                        current_tile['RelativeTilePosition_y'] * relative_y_stepsize
+                                        current_tile['RelativeTilePosition_y'] * relative_y_stepsize
                     tile_center_stage_position = absolute_tile_pos + self.img_width / 2 * relative_x_stepsize + \
-                        self.img_height / 2 * relative_y_stepsize
+                                                 self.img_height / 2 * relative_y_stepsize
 
                     self._tile_center_stage_positions.append(tile_center_stage_position)
                     self._tile_names.append([current_layer['layer_name'], current_tile_name])
@@ -497,15 +508,12 @@ class MapsXmlParser:
         The surrounding_tile_names and surrounding_tile_exists are added in determine_surrounding_tiles
 
         """
-        # Give annotation_name, layers metadata key, layer_name, tile_name,
-        # stage coordinates & pixel position in the image
-
         # If the min distance is smaller than the diagonal distance to the edge of the image from its center,
         # we have found the closest tile and the annotation is within that tile.
         # If the distance is larger than the diagonal distance to the edge, the annotation is not inside of any tile
         # and thus shouldn't be exported
         distance_threshold = np.square(self.img_height / 2 * self.pixel_size) + \
-            np.square(self.img_width / 2 * self.pixel_size)
+                             np.square(self.img_width / 2 * self.pixel_size)
 
         for annotation_name in self.annotations:
             a_coordinates = np.array([self.annotations[annotation_name]['StagePosition_x'],
@@ -583,7 +591,7 @@ class MapsXmlParser:
             for i in range(-self.stitch_radius, self.stitch_radius + 1):
                 for j in range(-self.stitch_radius, self.stitch_radius + 1):
                     # Create the filenames
-                    new_filename = center_filename[:5] + f'{x+i:03}' + '-' + f'{y+j:03}' + center_filename[12:]
+                    new_filename = center_filename[:5] + f'{x + i:03}' + '-' + f'{y + j:03}' + center_filename[12:]
                     self.annotation_tiles[annotation_name]['surrounding_tile_names'].append(new_filename)
 
                     # Check whether those files exist
@@ -612,7 +620,7 @@ class MapsXmlParser:
             list: list of all the paths to the saved csv files
 
         """
-        assert(str(csv_path).endswith('.csv'))
+        assert (str(csv_path).endswith('.csv'))
         csv_files = []
         # Initialize empty csv file (or csv files if batch mode is used)
         base_header_2 = ['Image'] + base_header
@@ -649,7 +657,7 @@ class MapsXmlParser:
                     with open(str(csv_path), 'a') as f:
                         current_annotation_pd.to_csv(f, header=False, index=False)
                 else:
-                    current_batch = int(i/batch_size)
+                    current_batch = int(i / batch_size)
                     csv_batch_path = str(csv_path)[:-4] + '_{}.csv'.format(f'{current_batch:05}')
                     with open(str(csv_batch_path), 'a') as f:
                         current_annotation_pd.to_csv(f, header=False, index=False)
@@ -697,3 +705,43 @@ class MapsXmlParser:
                         annotation_tiles[row['Image']][column] = row[column]
 
         return annotation_tiles
+
+    def parse_classifier_output(self, file_path, annotation_shift: int = 128):
+        # Load the csv containing classifier info
+        base_annotation_name = 'Fork_'
+        annotation_index = 0
+        annotations_per_tileset = {}
+        with open(file_path) as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            for tile_set in csv_reader:
+                tile_set_name = tile_set[0]
+                annotations_per_tileset[tile_set_name] = ast.literal_eval(tile_set[1])
+
+        # Parse the MAPS experiment (without annotations) to get the positions of all tiles
+        self.extract_layers_and_annotations(check_for_annotations=False)
+        self.get_relative_tile_locations()
+        self.calculate_absolute_tile_coordinates()
+
+        # Map the annotations to the corresponding tiles
+        for current_tile_set in annotations_per_tileset:
+            for tile in annotations_per_tileset[current_tile_set]:
+                tile_key = current_tile_set + '_' + tile
+                current_tile = self.tiles[tile_key]
+                for annotation in annotations_per_tileset[current_tile_set][tile]:
+                    # Get Annotation_Names => Create increasing names
+                    annotation_index += 1
+                    annotation_name = base_annotation_name + str(annotation_index).zfill(5)
+
+                    self.annotation_tiles[annotation_name] = copy.deepcopy(current_tile)
+                    self.annotation_tiles[annotation_name]['pixel_size'] = self.pixel_size
+                    # If relevant, the StagePositions could be calculated and added here. As they are only used to find
+                    # the tile of interest and the classifier output already provides that, it's not done here
+                    self.annotation_tiles[annotation_name]['Annotation_StagePosition_x'] = None
+                    self.annotation_tiles[annotation_name]['Annotation_StagePosition_y'] = None
+                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_x'] = annotation[0] \
+                                                                                               + annotation_shift
+                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_y'] = annotation[1] \
+                                                                                               + annotation_shift
+        self.determine_surrounding_tiles()
+
+        return self.annotation_tiles

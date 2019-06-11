@@ -397,7 +397,7 @@ class Stitcher:
         batches
 
         Args:
-            batch_size (int): Description of arg2
+            batch_size (int): Batch size of the csv files
             highmag_layer (str): Name of the image layer in MAPS for which tiles containing annotations should
                 be found. Defaults to 'highmag'
 
@@ -418,6 +418,38 @@ class Stitcher:
                                                                          batch_size=batch_size)
 
         return [annotation_tiles, annotation_csvs]
+
+    def parse_create_classifier_csv_batches(self, batch_size: int, classifier_csv_path: str,
+                                            highmag_layer: str = 'highmag'):
+        """Creates the batch csv files of annotation_tiles based on classifier output
+
+        Calls the MapsXmlParser to parse the XML file of the acquisition and save the annotation_tiles as a csv in
+        batches
+
+        Args:
+            batch_size (int): Batch size of the csv files
+            classifier_csv_path (str): Path to the classifier output csv file
+            highmag_layer (str): Name of the image layer in MAPS for which tiles containing annotations should
+                be found. Defaults to 'highmag'
+
+        Returns:
+            list: First value: The annotation_tiles dictionary. Second value: A list of the filenames of the csv files
+                that were created
+
+        """
+        # Make folders for csv files
+        os.makedirs(str(self.csv_base_path), exist_ok=True)
+        csv_path = self.csv_base_path / (self.project_name + '_annotations' + '.csv')
+
+        parser = sip.MapsXmlParser(project_folder=self.project_folder_path, use_unregistered_pos=True,
+                                   name_of_highmag_layer=highmag_layer, stitch_radius=self.stitch_radius)
+
+        annotation_tiles = parser.parse_classifier_output(classifier_csv_path)
+        annotation_csvs = sip.MapsXmlParser.save_annotation_tiles_to_csv(annotation_tiles, self.base_header, csv_path,
+                                                                         batch_size=batch_size)
+
+        return [annotation_tiles, annotation_csvs]
+
 
     def stitch_batch(self, annotation_csv_path, stitch_threshold: int = 1000, eight_bit: bool = True,
                      show_arrow: bool = True, enhance_contrast: bool = True):
