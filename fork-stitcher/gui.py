@@ -19,6 +19,7 @@ class Gui:
 
     def __init__(self, master):
 
+        self.master = master
         frame = tk.Frame(master)
         # ***** Menu *****
         menu = tk.Menu(master)
@@ -82,7 +83,8 @@ class Gui:
         tk.Checkbutton(master, text='Continue Processing an Experiment', variable=self.continue_processing).\
             grid(row=10, column=1, sticky=tk.W)
 
-        # Add a "continue existing processing" Button
+        # TODO: Add button & File picker for classifier csv (dropdown/appear when clicked if possible)
+
 
         # Run button
         self.run_button = tk.Button(master, text='Run', fg='red', command=self.run, width=20)
@@ -115,13 +117,16 @@ class Gui:
 
             # TODO: Catch the quitting of the window to shut down the thread
             thread = threading.Thread(target=self.dummy, args=(10, ))
+            thread.daemon = True
             thread.start()
             # thread = threading.Thread(target=self.run_from_beginning, args=(base_path, project_name,))
+            # thread.daemon = True
             # thread.start()
 
         elif params_set and self.continue_processing.get():
             logging.info('Continuing to process experiment {}'.format(project_name))
             # thread = threading.Thread(target=self.continue_run, args=(base_path, project_name,))
+            # thread.daemon = True
             # thread.start()
 
         else:
@@ -155,7 +160,6 @@ class Gui:
             print('Running Dummy 2! =D')
             time.sleep(1)
 
-
     def ask_for_path(self):
         path = tkinter.filedialog.askdirectory()
         self.project_path.set(path)
@@ -178,6 +182,12 @@ class Gui:
 
         return params_set
 
+    def shutdown(self):
+        # Helper function to shut down all stitching processes when the interface is quit
+        if tk.messagebox.askokcancel("Quit", "Do you want to stop processing the experiment?"):
+            self.master.destroy()
+
+
 
 def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
@@ -187,7 +197,7 @@ def main():
     root.geometry("+2000+0")
 
     p = Gui(root)
-
+    root.protocol("WM_DELETE_WINDOW", p.shutdown)
     root.mainloop()
 
 
