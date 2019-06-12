@@ -4,6 +4,7 @@ from pathlib import Path
 import multiprocessing
 
 from stitch_MAPS_annotations import Stitcher
+from sites_of_interest_parser import MapsXmlParser
 
 def main():
     # Paths
@@ -22,18 +23,31 @@ def main():
 
     # TODO: Make logging work on Windows and with multiprocessing
     # Logging
-    logging.basicConfig(filename=str(Path(base_path) / project_name / (project_name + '_test.log')), level=logging.INFO,
-                        format='%(asctime)s %(message)s') # handlers=[logging.FileHandler(Path(base_path) / project_name / (project_name + '_test.log')), logging.StreamHandler()]
-    # multiprocessing.log_to_stderr()
-    # logger = multiprocessing.get_logger()
-    logging.info('Processing experiment {}'.format(project_name))
+    # logging.basicConfig(filename=str(Path(base_path) / project_name / (project_name + '.log')), level=logging.INFO,
+    #                     format='%(asctime)s %(message)s') # handlers=[logging.FileHandler(Path(base_path) / project_name / (project_name + '_test.log')), logging.StreamHandler()]
+    # logger = logging.getLogger(__name__)
+    # #
+    # # # Create file logging handler
+    # logger_filename = str(Path(base_path) / project_name / (project_name + '.log'))
+    # fh = logging.FileHandler(logger_filename)
+    # fh.setLevel(logging.INFO)
+    # logger.addHandler(fh)
+    # #
+    # # # Create console logging handler
+    # ch = logging.StreamHandler()
+    # ch.setLevel(logging.INFO)
+    # logger.addHandler(ch)
+    # logger.info('Processing experiment {}'.format(project_name))
+    logger_filename = str(Path(base_path) / project_name / (project_name + '.log'))
+    logger = MapsXmlParser.create_logger(logger_filename)
+    logger.info('Processing experiment {}'.format(project_name))
 
     # Parameters
     batch_size = 5
     stitch_threshold = 2000
     highmag_layer = 'highmag'
     eight_bit = True
-    max_processes = 2
+    max_processes = 1
     show_arrow = True
     enhance_contrast = True
 

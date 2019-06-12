@@ -398,6 +398,34 @@ class Stitcher:
             image_plus_img.close()
             return
 
+    # @staticmethod
+    # def create_logger(log_file_path, multiprocessing_logger: bool = False):
+    #     if multiprocessing_logger:
+    #         logger = multiprocessing.get_logger()
+    #         logger.setLevel(logging.INFO)
+    #         logger.propagate = True
+    #     else:
+    #         logger = logging.getLogger(__name__)
+    #
+    #     logger.setLevel(logging.INFO)
+    #
+    #     formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
+    #
+    #     # Create file logging handler
+    #     fh = logging.FileHandler(log_file_path)
+    #     fh.setLevel(logging.INFO)
+    #     fh.setFormatter(formatter)
+    #     logger.addHandler(fh)
+    #
+    #
+    #     # Create console logging handler
+    #     # ch = logging.StreamHandler()
+    #     # ch.setLevel(logging.INFO)
+    #     # logger.addHandler(ch)
+    #
+    #     return logger
+
+
     def parse_create_csv_batches(self, batch_size: int, highmag_layer: str = 'highmag'):
         """Creates the batch csv files of annotation_tiles
 
@@ -458,8 +486,8 @@ class Stitcher:
 
         return [annotation_tiles, annotation_csvs]
 
-    def stitch_batch(self, annotation_csv_path, logger, stitch_threshold: int = 1000, eight_bit: bool = True,
-                     show_arrow: bool = True, enhance_contrast: bool = True):
+    def stitch_batch(self, annotation_csv_path, stitch_threshold: int = 1000, eight_bit: bool = True,
+                     show_arrow: bool = True, enhance_contrast: bool = True, multiprocessing_logger: bool = False):
         """Submits the stitching of a batch, the writing of an updated csv file and the deletion of the old csv file
 
         Args:
@@ -472,12 +500,16 @@ class Stitcher:
                 the stitched image. Defaults to True, thus adding an arrow to the overlay
             enhance_contrast (bool): Whether contrast enhancement should be performed on the images before stitching.
                 Defaults to True (thus enhancing contrast in the images)
+            multiprocessing_logger (bool): Whether a multiprocessing logger or a normal logger should be used. Defaults
+                to False, thus using a normal logger
 
         """
         # Check if a folder for the stitched forks already exists. If not, create that folder
         os.makedirs(str(self.output_path), exist_ok=True)
         annotation_tiles_loaded = sip.MapsXmlParser.load_annotations_from_csv(self.base_header, annotation_csv_path)
 
+        log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
+        logger = sip.MapsXmlParser.create_logger(log_file_path, multiprocessing_logger)
         stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded, logger=logger,
                                                                 stitch_threshold=stitch_threshold,
                                                                 eight_bit=eight_bit, show_arrow=show_arrow,
@@ -514,21 +546,17 @@ class Stitcher:
             if regex.search(name):
                 annotation_csv_list.append(self.csv_base_path / name)
         if max_processes > 1:
-            _logger = multiprocessing.get_logger()
-            _logger.setLevel(logging.INFO)
-            _logger.propagate = True
             with multiprocessing.Pool(processes=max_processes) as pool:
                 for annotation_csv_path in annotation_csv_list:
-                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, _logger, stitch_threshold, eight_bit,
-                                                              show_arrow, enhance_contrast, ))
+                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit,
+                                                              show_arrow, enhance_contrast, True, ))
 
                 pool.close()
                 pool.join()
         else:
-            _logger = logging.getLogger(__name__)
             for annotation_csv_path in annotation_csv_list:
-                self.stitch_batch(annotation_csv_path, _logger, stitch_threshold, eight_bit, show_arrow,
-                                  enhance_contrast)
+                self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit, show_arrow,
+                                  enhance_contrast, False)
 
     def combine_csvs(self, delete_batches: bool = False, to_excel: bool = True):
         """Combines batch csv output files into the final csv file and optionally an excel file

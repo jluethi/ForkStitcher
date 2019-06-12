@@ -2,7 +2,6 @@
 # Developed with data from MAPS Viewer 3.6
 
 import xml.etree.ElementTree as ET
-import sys
 import csv
 import ast
 import numpy as np
@@ -11,11 +10,15 @@ import math
 from pathlib import Path
 import logging
 import copy
+import multiprocessing
 
 
 class XmlParsingFailed(Exception):
     def __init__(self, message):
         logging.error(message)
+
+
+loggers = {}
 
 
 class MapsXmlParser:
@@ -185,6 +188,36 @@ class MapsXmlParser:
             path = path / folder
         return path
 
+    @staticmethod
+    def create_logger(log_file_path, multiprocessing_logger: bool = False):
+        global loggers
+        if loggers.get(__name__):
+            return loggers.get(__name__)
+        else:
+            if multiprocessing_logger:
+                logger = multiprocessing.get_logger()
+                logger.setLevel(logging.INFO)
+                logger.propagate = True
+            else:
+                logger = logging.getLogger(__name__)
+
+            logger.setLevel(logging.INFO)
+
+            formatter = logging.Formatter('%(asctime)s : %(name)-12s : %(levelname)s : %(message)s')
+
+            # Create file logging handler
+            fh = logging.FileHandler(log_file_path)
+            fh.setLevel(logging.INFO)
+            fh.setFormatter(formatter)
+            logger.addHandler(fh)
+
+            # Create console logging handler
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.INFO)
+            logger.addHandler(ch)
+
+            return logger
+
     def extract_layers_and_annotations(self, check_for_annotations: bool = True):
         """Extract the information about all the layers in the high magnification acquisition layers and the annotations
 
@@ -229,7 +262,8 @@ class MapsXmlParser:
             layer_group: Part of the XML object that contains the information for a LayerGroup
 
         """
-        logger = logging.getLogger(__name__)
+        log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
+        logger = self.create_logger(log_file_path)
         for ggc in layer_group:
             # Get the path to the metadata xml files for all the highmag layers,
             # the pixel size and the StagePosition of the layers
@@ -252,7 +286,7 @@ class MapsXmlParser:
                                 self._extract_annotation_locations(layer)
                             else:
                                 logger.warning('XML Parser does not know how to deal with {} Layers and '
-                                                'therefore does not parse them'.format(layer_type))
+                                               'therefore does not parse them'.format(layer_type))
             else:
                 if ggc.tag.endswith('Layers'):
                     for layer in ggc:
@@ -513,9 +547,10 @@ class MapsXmlParser:
         # we have found the closest tile and the annotation is within that tile.
         # If the distance is larger than the diagonal distance to the edge, the annotation is not inside of any tile
         # and thus shouldn't be exported
-        logger = logging.getLogger(__name__)
-        distance_threshold = np.square(self.img_height / 2 * self.pixel_size) + \
-                             np.square(self.img_width / 2 * self.pixel_size)
+        log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
+        logger = self.create_logger(log_file_path)
+        distance_threshold = np.square(self.img_height / 2 * self.pixel_size) \
+                             + np.square(self.img_width / 2 * self.pixel_size)
 
         for annotation_name in self.annotations:
             a_coordinates = np.array([self.annotations[annotation_name]['StagePosition_x'],
@@ -569,8 +604,8 @@ class MapsXmlParser:
                 self.annotation_tiles[annotation_name]['Annotation_tile_img_position_y'] = annotation_img_position[1]
 
             else:
-                _logger.warning('Annotation {} is not within any of the tiles and will be ignored'.
-                                format(annotation_name))
+                logger.warning('Annotation {} is not within any of the tiles and will be ignored'
+                               .format(annotation_name))
 
     def determine_surrounding_tiles(self):
         """Checks whether each annotation tile has surrounding tiles to be stitched with it
