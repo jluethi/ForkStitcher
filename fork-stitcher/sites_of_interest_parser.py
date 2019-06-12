@@ -187,6 +187,19 @@ class MapsXmlParser:
 
     @staticmethod
     def create_logger(log_file_path, multiprocessing_logger: bool = False):
+        """ Returns a logger and creates it if it doesn't yet exist
+
+        Gets the correct logger for normal or multiprocessing. If it already exists, just returns this logger. If it
+        doesn't exist yet, sets it up correctly.
+
+        Args:
+            log_file_path (str): Path to the log file
+            multiprocessing_logger (bool): Whether a multiprocessing logger is needed. Defaults to False.
+
+        Returns:
+            logger: Logger object that has the correct handlers
+
+        """
         if multiprocessing_logger:
             logger = multiprocessing.get_logger()
             logger.setLevel(logging.INFO)
@@ -223,7 +236,7 @@ class MapsXmlParser:
         exception.
 
         Args:
-            check_for_annotations(bool): Whether the parsing should check for the existence of annotations and throw an
+            check_for_annotations (bool): Whether the parsing should check for the existence of annotations and throw an
                 error if none are found. Defaults to True, thus checking for annotations.
 
         """
@@ -515,10 +528,10 @@ class MapsXmlParser:
 
                     # absolute_tile_pos is the position of the corner of the tile in absolute Stage Position
                     # coordinates, the tile_center_stage_position are the Stage Position coordinates of the tile
-                    absolute_tile_pos = relative_0 + current_tile['RelativeTilePosition_x'] * relative_x_stepsize + \
-                                        current_tile['RelativeTilePosition_y'] * relative_y_stepsize
-                    tile_center_stage_position = absolute_tile_pos + self.img_width / 2 * relative_x_stepsize + \
-                                                 self.img_height / 2 * relative_y_stepsize
+                    absolute_tile_pos = relative_0 + current_tile['RelativeTilePosition_x'] * relative_x_stepsize \
+                                        + current_tile['RelativeTilePosition_y'] * relative_y_stepsize
+                    tile_center_stage_position = absolute_tile_pos + self.img_width / 2 * relative_x_stepsize \
+                                                 + self.img_height / 2 * relative_y_stepsize
 
                     self._tile_center_stage_positions.append(tile_center_stage_position)
                     self._tile_names.append([current_layer['layer_name'], current_tile_name])
@@ -587,9 +600,9 @@ class MapsXmlParser:
 
                 except ZeroDivisionError:
                     logger.warning('Formula for the calculation of the annotation position within the image '
-                                    'does not work for these parameters, a rotation of {} leads to divison by 0. The '
-                                    'annotation marker is placed in the middle of the image because the location '
-                                    'could not be calculated'.format(rotation))
+                                   'does not work for these parameters, a rotation of {} leads to divison by 0. The '
+                                   'annotation marker is placed in the middle of the image because the location '
+                                   'could not be calculated'.format(rotation))
                     x_shift = 0
                     y_shift = 0
 
@@ -684,7 +697,6 @@ class MapsXmlParser:
                 current_annotation_pd = pd.DataFrame(current_annotation, index=[0])
 
                 # Default: everything is saved into one csv file
-                # TODO: Add an Excel option or get rid of extra lines in Excel after writing csvs on Windows
                 if batch_size == 0:
                     with open(str(csv_path), 'a') as f:
                         current_annotation_pd.to_csv(f, header=False, index=False)
@@ -739,6 +751,23 @@ class MapsXmlParser:
         return annotation_tiles
 
     def parse_classifier_output(self, file_path, annotation_shift: int = 128):
+        """Parses the output of the classifier and returns the annotation_tiles
+
+        Goes through the csv file produced by the classifier, parses the corresponding MAPS XML File and builds the
+        necessary MapsXmlParser dictionaries so that they can be saved to csv afterwards. Excpects the following
+        structure in the classifier csv:
+        Dictionary with TileSets as keys and a dictionary as value. The value dictionary contains dictionaries for each
+        tile with annotations. The name of the tile is the key and the top left corner of the annotations are the
+        values, saved as a list of tuples (x,y)
+
+        Args:
+            file_path (str): Path to the classifier output csv
+            annotation_shift (int): How much the center of the annotation is shifted from the top left corner. Defaults
+                to 128 (for 256x256 images from the classifier)
+
+        Returns:
+            self.annotation_tiles: Dictionary of all annotation tiles
+        """
         # Load the csv containing classifier info
         base_annotation_name = 'Fork_'
         annotation_index = 0

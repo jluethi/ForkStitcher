@@ -59,6 +59,8 @@ class Stitcher:
 
         self.csv_base_path = Path(self.project_folder_path) / csv_folder
 
+        self.log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
+
         # Headers of the categorization & the measurements for forks. Values filled in by users afterwards
         self.base_header = ['Linear DNA', 'Loop', 'Crossing', 'Other False Positive', 'Missing Link Fork',
                             'fork symetric', 'fork asymetric', 'reversed fork symetric', 'reversed fork asymetric',
@@ -69,8 +71,8 @@ class Stitcher:
                             'list for ssDNA at junction (nt)', 'Remarks',
                             ]
 
-    def stitch_annotated_tiles(self, annotation_tiles: dict, logger, stitch_threshold: int = 1000, eight_bit: bool = True,
-                               show_arrow: bool = True, enhance_contrast: bool = True):
+    def stitch_annotated_tiles(self, annotation_tiles: dict, logger, stitch_threshold: int = 1000,
+                               eight_bit: bool = True, show_arrow: bool = True, enhance_contrast: bool = True):
         """Stitches 3x3 images for all annotations in annotation_tiles
 
         Goes through all annotations in annotation_tiles dict, load the center file and the existing surrounding files.
@@ -166,10 +168,10 @@ class Stitcher:
                     center_index = 0
                 else:
                     logger.warning('Not stitching fork {}, because there is no rectangle of images to stitch. '
-                                    'This stitching function is only made for 3x3, 2x3, 3x2 and 2x2 stitching. '
-                                    'Those tiles do exist: {}'.format(annotation_name,
-                                                                      annotation_tiles[annotation_name]
-                                                                      ['surrounding_tile_exists']))
+                                   'This stitching function is only made for 3x3, 2x3, 3x2 and 2x2 stitching. '
+                                   'Those tiles do exist: {}'.format(annotation_name,
+                                                                     annotation_tiles[annotation_name]
+                                                                     ['surrounding_tile_exists']))
                     # Instead of stitching, copy the center tile to the output folder
                     center_file_path = Path(img_path) / annotation_tiles[annotation_name]['surrounding_tile_names'][4]
                     output_filename = self.output_path / (annotation_name + '_StitchingFailed_centerOnly.tiff')
@@ -178,9 +180,9 @@ class Stitcher:
 
             else:
                 logger.warning('Not stitching fork {}, because there is no rectangle of images to stitch. '
-                                'This stitching function is only made for 3x3, 2x3, 3x2 and 2x2 stitching. '
-                                'Those tiles do exist: {}'.format(annotation_name, annotation_tiles[annotation_name]
-                                                                  ['surrounding_tile_exists']))
+                               'This stitching function is only made for 3x3, 2x3, 3x2 and 2x2 stitching. '
+                               'Those tiles do exist: {}'.format(annotation_name, annotation_tiles[annotation_name]
+                                                                                        ['surrounding_tile_exists']))
                 # Instead of stitching, copy the center tile to the output folder
                 center_file_path = Path(img_path) / annotation_tiles[annotation_name]['surrounding_tile_names'][4]
                 output_filename = self.output_path / (annotation_name + '_StitchingFailed_centerOnly.tiff')
@@ -261,8 +263,8 @@ class Stitcher:
 
             else:
                 logger.warning('Not stitching fork {}, because the stitching calculations displaced the images more '
-                                'than {} pixels. Instead, just copying the center image to the target folder'
-                                .format(annotation_name, stitch_threshold))
+                               'than {} pixels. Instead, just copying the center image to the target folder'
+                               .format(annotation_name, stitch_threshold))
                 center_file_path = Path(img_path) / annotation_tiles[annotation_name]['surrounding_tile_names'][4]
                 output_filename = self.output_path / (annotation_name + '_StitchingFailed_centerOnly.tiff')
                 shutil.copy(center_file_path, output_filename)
@@ -489,8 +491,7 @@ class Stitcher:
         os.makedirs(str(self.output_path), exist_ok=True)
         annotation_tiles_loaded = sip.MapsXmlParser.load_annotations_from_csv(self.base_header, annotation_csv_path)
 
-        log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
-        logger = sip.MapsXmlParser.create_logger(log_file_path, multiprocessing_logger)
+        logger = sip.MapsXmlParser.create_logger(self.log_file_path, multiprocessing_logger)
         stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded, logger=logger,
                                                                 stitch_threshold=stitch_threshold,
                                                                 eight_bit=eight_bit, show_arrow=show_arrow,
@@ -549,6 +550,8 @@ class Stitcher:
                 Excel file)
 
         """
+        logger = sip.MapsXmlParser.create_logger(self.log_file_path)
+
         items = os.listdir(self.csv_base_path)
         stitched_csvs = []
         for name in items:
@@ -570,7 +573,7 @@ class Stitcher:
                 os.remove(self.csv_base_path / name)
 
         if to_excel:
-            print('Saving the annotations csv as an excel file')
+            logger.info('Saving the annotations csv as an excel file')
             data_frame = pd.read_csv(csv_output_path)
             excel_output_path = self.csv_base_path / (self.project_name + '_fused' + '.xlsx')
 
