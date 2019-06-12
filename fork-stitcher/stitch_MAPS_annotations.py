@@ -328,9 +328,9 @@ class Stitcher:
         return [good_stitching, stitched_annotation_coordinates.astype(int)]
 
     @staticmethod
-    def local_contrast_enhancement(img_path, output_path, logger, save_img: bool = True, eight_bit: bool = True,
+    def local_contrast_enhancement(img_path, output_path, logger=None, save_img: bool = False, eight_bit: bool = True,
                                    use_norm_local_contrast: bool = False, use_CLAHE: bool = False,
-                                   return_image: bool = True, **kwargs):
+                                   return_java_img: bool = False, return_numpy_img: bool = False, **kwargs):
         """Loads an image and performs local contrast enhancement
 
         Loads the specified image, performs either NormalizeLocalContrast (default), CLAHE or no local contrast
@@ -343,15 +343,17 @@ class Stitcher:
             img_path (Path or str): Full path to the image to be processed
             output_path (Path or str): Full path to where the output image should be saved (if save_img is True)
             logger (Logging): Logging object that is configured for the logging either in multiprocessing or normal
-                processing
-            save_img (bool): Whether the processed image should be saved. Defaults to True (saving the image)
+                processing. Defaults to None, thus loading the logger
+            save_img (bool): Whether the processed image should be saved. Defaults to False (not saving the image)
             eight_bit (bool): Whether the image should be converted to 8 bit . Defaults to True (converting to 8 bit)
             use_norm_local_contrast (bool): Whether NormalizeLocalContrast Fiji Plugin should be run on the image.
                 Defaults to False (not running NormalizeLocalContrast on the image)
             use_CLAHE (bool): Whether CLAHE Fiji Plugin should be run on the image. Defaults to False (not running
                 CLAHE on the image)
-            return_image (bool): Whether the function should return the image or close it in ImageJ so that it is sent
-                to Garbage Collection and the memory is freed up again.
+            return_java_img (bool): Whether the function should return the java image. Defaults to False (not returning
+                the image)
+            return_numpy_img (bool): Whether the function should return a numpy version of the image. Defaults to False
+                (not returning the image)
 
         Returns:
             ImagePlus: The processed image as an ImageJ1 ImagePlus image (if return_image is True)
@@ -359,6 +361,9 @@ class Stitcher:
                 """
         from jnius import autoclass
         IJ = autoclass('ij.IJ')
+
+        if logger is None:
+            logger = logging.getLogger()
 
         image_plus_img = IJ.openImage(str(img_path))
 
@@ -392,39 +397,15 @@ class Stitcher:
         if save_img:
             IJ.saveAsTiff(image_plus_img, str(output_path))
 
-        if return_image:
+        if return_java_img:
             return image_plus_img
+        elif return_numpy_img:
+            np_img = ij.py.from_java(image_plus_img)
+            image_plus_img.close()
+            return np_img
         else:
             image_plus_img.close()
             return
-
-    # @staticmethod
-    # def create_logger(log_file_path, multiprocessing_logger: bool = False):
-    #     if multiprocessing_logger:
-    #         logger = multiprocessing.get_logger()
-    #         logger.setLevel(logging.INFO)
-    #         logger.propagate = True
-    #     else:
-    #         logger = logging.getLogger(__name__)
-    #
-    #     logger.setLevel(logging.INFO)
-    #
-    #     formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
-    #
-    #     # Create file logging handler
-    #     fh = logging.FileHandler(log_file_path)
-    #     fh.setLevel(logging.INFO)
-    #     fh.setFormatter(formatter)
-    #     logger.addHandler(fh)
-    #
-    #
-    #     # Create console logging handler
-    #     # ch = logging.StreamHandler()
-    #     # ch.setLevel(logging.INFO)
-    #     # logger.addHandler(ch)
-    #
-    #     return logger
-
 
     def parse_create_csv_batches(self, batch_size: int, highmag_layer: str = 'highmag'):
         """Creates the batch csv files of annotation_tiles
