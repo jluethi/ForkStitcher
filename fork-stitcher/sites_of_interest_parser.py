@@ -18,9 +18,6 @@ class XmlParsingFailed(Exception):
         logging.error(message)
 
 
-loggers = {}
-
-
 class MapsXmlParser:
     """XML Parser class that processes MAPS XMLs and reveals the image tiles belonging to each annotation
 
@@ -190,17 +187,15 @@ class MapsXmlParser:
 
     @staticmethod
     def create_logger(log_file_path, multiprocessing_logger: bool = False):
-        global loggers
-        if loggers.get(__name__):
-            return loggers.get(__name__)
+        if multiprocessing_logger:
+            logger = multiprocessing.get_logger()
+            logger.setLevel(logging.INFO)
+            logger.propagate = True
         else:
-            if multiprocessing_logger:
-                logger = multiprocessing.get_logger()
-                logger.setLevel(logging.INFO)
-                logger.propagate = True
-            else:
-                logger = logging.getLogger(__name__)
+            logger = logging.getLogger(__name__)
 
+        # If the logger doesn't have any handlers yet, add them. Otherwise, just return the logger
+        if not len(logger.handlers):
             logger.setLevel(logging.INFO)
 
             formatter = logging.Formatter('%(asctime)s : %(name)-12s : %(levelname)s : %(message)s')
@@ -216,7 +211,7 @@ class MapsXmlParser:
             ch.setLevel(logging.INFO)
             logger.addHandler(ch)
 
-            return logger
+        return logger
 
     def extract_layers_and_annotations(self, check_for_annotations: bool = True):
         """Extract the information about all the layers in the high magnification acquisition layers and the annotations

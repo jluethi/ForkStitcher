@@ -116,7 +116,7 @@ class Stitcher:
                     imps.append(self.local_contrast_enhancement(str(img_path / neighbor), '', logger, save_img=False,
                                                                 eight_bit=eight_bit,
                                                                 use_norm_local_contrast=enhance_contrast,
-                                                                return_image=True, center=True))
+                                                                return_java_img=True, center=True))
             java_imgs = ij.py.to_java(imps)
 
             # Define starting positions based on what neighbor tiles exist
