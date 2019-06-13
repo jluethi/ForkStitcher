@@ -34,3 +34,37 @@ cd docs
 make latexpdf
 make html
 ```
+
+Building a standalone application for stitcher
+----------
+Example for Windows:
+```
+pyinstaller --onefile -p fork-stitcher --add-data C:\Users\j.luethi\AppData\Local\Continuum\miniconda3\envs\fork_stitcher\share\pyjnius\pyjnius.jar;.\ForkStitcher\share\pyjnius\pyjnius.jar fork-stitcher/gui.py
+```
+
+Where --add-data path points to where the pyjnius JAR file is located on the local machine, followed by ./share/pyjnius/'
+To find the location of pyjnius on your machine, use:
+
+```
+import logging
+logging.basicConfig(level=logging.DEBUG)
+import scyjava
+```
+
+Including an icon:
+```
+pyinstaller --onefile --icon stitchericon_1_EYC_icon.ico -p fork-stitcher --add-data C:\Users\j.luethi\AppData\Local\Continuum\miniconda3\envs\fork_stitcher\share\pyjnius\pyjnius.jar;.\ForkStitcher\share\pyjnius\pyjnius.jar fork-stitcher/gui.py
+```
+
+
+On Mac:
+: instead of ; in the --add-data path and '' around the path
+Folder version:
+```
+pyinstaller -p fork-stitcher --add-data '/miniconda3/envs/fork_stitcher/share/pyjnius/pyjnius.jar:./share/pyjnius/' fork-stitcher/run_stitching_batches.py
+```
+
+One File Option:
+```
+pyinstaller --onefile -p fork-stitcher --add-data '/miniconda3/envs/fork_stitcher/share/pyjnius/pyjnius.jar:./share/pyjnius/' fork-stitcher/run_stitching_batches.py
+```
