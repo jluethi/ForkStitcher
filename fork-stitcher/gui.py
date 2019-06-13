@@ -9,7 +9,7 @@ import logging
 import threading
 import queue
 
-# from stitch_MAPS_annotations import Stitcher
+from stitch_MAPS_annotations import Stitcher
 from sites_of_interest_parser import MapsXmlParser
 
 # TODO: Figure out how to run pyimagej and tkinter at the same time on Macs, see suggestions here:
@@ -184,19 +184,19 @@ class Gui:
             logger = MapsXmlParser.create_logger(log_file_path)
             logger.info('Process experiment {}'.format(project_name))
 
-            thread = threading.Thread(target=self.dummy, args=(20, ))
-            thread.daemon = True
-            thread.start()
-            # thread = threading.Thread(target=self.run_from_beginning, args=(base_path, project_name,))
+            # thread = threading.Thread(target=self.dummy, args=(20, ))
             # thread.daemon = True
             # thread.start()
+            thread = threading.Thread(target=self.run_from_beginning, args=(base_path, project_name,))
+            thread.daemon = True
+            thread.start()
 
         elif params_set and self.continue_processing.get():
             self.create_logging_window()
             logging.info('Continuing to process experiment {}'.format(project_name))
-            # thread = threading.Thread(target=self.continue_run, args=(base_path, project_name,))
-            # thread.daemon = True
-            # thread.start()
+            thread = threading.Thread(target=self.continue_run, args=(base_path, project_name,))
+            thread.daemon = True
+            thread.start()
 
         else:
             tkinter.messagebox.showwarning(title='Warning: parameters missing',
@@ -205,19 +205,19 @@ class Gui:
 
         # TODO: Show all warnings to the user
 
-    # def run_from_beginning(self, base_path, project_name):
-    #     # TODO: Catch issues when wrong path is provided or another error/warning occurs in the stitcher => catch my custom Exception, display it to the user
-    #     stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
-    #     stitcher.parse_create_csv_batches(batch_size=self.batch_size.get(), highmag_layer=self.highmag_layer.get())
-    #     stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
-    #                             max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
-    #     stitcher.combine_csvs(delete_batches=True)
-    #
-    # def continue_run(self, base_path, project_name):
-    #     stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
-    #     stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
-    #                             max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
-    #     stitcher.combine_csvs(delete_batches=True)
+    def run_from_beginning(self, base_path, project_name):
+        # TODO: Catch issues when wrong path is provided or another error/warning occurs in the stitcher => catch my custom Exception, display it to the user
+        stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
+        stitcher.parse_create_csv_batches(batch_size=self.batch_size.get(), highmag_layer=self.highmag_layer.get())
+        stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
+                                max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
+        stitcher.combine_csvs(delete_batches=True)
+
+    def continue_run(self, base_path, project_name):
+        stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
+        stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
+                                max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
+        stitcher.combine_csvs(delete_batches=True)
 
     def create_logging_window(self):
         log_window = tk.Toplevel(self.master)
