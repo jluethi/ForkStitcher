@@ -2,17 +2,82 @@ from pathlib import Path
 import tkinter as tk
 import tkinter.messagebox
 import tkinter.filedialog
+from tkinter.scrolledtext import ScrolledText
 import _tkinter
 import time
 import logging
 import threading
+import queue
 
 # from stitch_MAPS_annotations import Stitcher
+from sites_of_interest_parser import MapsXmlParser
 
 # TODO: Figure out how to run pyimagej and tkinter at the same time on Macs, see suggestions here:
 #  https://github.com/imagej/pyimagej/issues/39
 # import imagej
 # ij = imagej.init('/Applications/Fiji.app')
+
+
+class QueueHandler(logging.Handler):
+    """Class that accepts logs and adds them to a queue
+    """
+    # Based on: https://github.com/beenje/tkinter-logging-text-widget
+
+    def __init__(self, logging_queue):
+        super().__init__()
+        self.logging_queue = logging_queue
+
+    def emit(self, log_statement):
+        self.logging_queue.put(log_statement)
+
+
+class LoggingWindow:
+    # Based on: https://github.com/beenje/tkinter-logging-text-widget
+    def __init__(self, master):
+        self.master = master
+        self.scrolled_text = ScrolledText(master=master, state='disabled', height=15)
+        self.scrolled_text.grid(row=0, column=0)
+        self.scrolled_text.configure(font='TkFixedFont')
+        self.scrolled_text.tag_config('INFO', foreground='black')
+        self.scrolled_text.tag_config('DEBUG', foreground='gray')
+        self.scrolled_text.tag_config('WARNING', foreground='orange')
+        self.scrolled_text.tag_config('ERROR', foreground='red')
+
+        # Get the logger
+        self.logger = logging.getLogger()
+
+        self.log_queue = queue.Queue()
+        self.queue_handler = QueueHandler(self.log_queue)
+        formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
+        self.queue_handler.setFormatter(formatter)
+        self.logger.addHandler(self.queue_handler)
+        # Start polling messages from the queue
+        self.master.after(100, self.poll_log_queue)
+
+        self.autoscroll = tk.BooleanVar()
+        tk.Checkbutton(master, text='Autoscroll Log', variable=self.autoscroll).\
+            grid(row=1, column=0, sticky=tk.W)
+        self.autoscroll.set(True)
+
+    def display(self, record):
+        msg = self.queue_handler.format(record)
+        self.scrolled_text.configure(state='normal')
+        self.scrolled_text.insert(tk.END, msg + '\n', record.levelname)
+        self.scrolled_text.configure(state='disabled')
+        # Autoscroll to the bottom
+        if self.autoscroll.get():
+            self.scrolled_text.yview(tk.END)
+
+    def poll_log_queue(self):
+        # Check every 100ms if there is a new message in the queue to display
+        while True:
+            try:
+                record = self.log_queue.get(block=False)
+            except queue.Empty:
+                break
+            else:
+                self.display(record)
+        self.master.after(100, self.poll_log_queue)
 
 
 class Gui:
@@ -21,6 +86,7 @@ class Gui:
 
         self.master = master
         frame = tk.Frame(master)
+
         # ***** Menu *****
         menu = tk.Menu(master)
         master.config(menu=menu)
@@ -95,7 +161,7 @@ class Gui:
 
     def reset_parameters(self):
         self.project_path.set('')
-        self.max_processes.set(4)
+        self.max_processes.set(3)
         self.eight_bit.set(True)
         self.batch_size.set(5)
         self.output_folder.set('stitchedForks_test')
@@ -113,10 +179,12 @@ class Gui:
 
         params_set = self.check_all_parameters_set()
         if params_set and not self.continue_processing.get():
-            logging.info('Process experiment {}'.format(project_name))
+            self.create_logging_window()
+            log_file_path = str(Path(project_dir) / (project_name + '.log'))
+            logger = MapsXmlParser.create_logger(log_file_path)
+            logger.info('Process experiment {}'.format(project_name))
 
-            # TODO: Catch the quitting of the window to shut down the thread
-            thread = threading.Thread(target=self.dummy, args=(10, ))
+            thread = threading.Thread(target=self.dummy, args=(20, ))
             thread.daemon = True
             thread.start()
             # thread = threading.Thread(target=self.run_from_beginning, args=(base_path, project_name,))
@@ -124,6 +192,7 @@ class Gui:
             # thread.start()
 
         elif params_set and self.continue_processing.get():
+            self.create_logging_window()
             logging.info('Continuing to process experiment {}'.format(project_name))
             # thread = threading.Thread(target=self.continue_run, args=(base_path, project_name,))
             # thread.daemon = True
@@ -150,21 +219,25 @@ class Gui:
     #                             max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
     #     stitcher.combine_csvs(delete_batches=True)
 
+    def create_logging_window(self):
+        log_window = tk.Toplevel(self.master)
+        log_window.title('Log')
+        scrolled_text_box = LoggingWindow(log_window)
+
     def dummy(self, iterations):
+        logger = logging.getLogger(__name__)
         # while True:
         for i in range(iterations):
-            print('Running Dummy')
+            logger.info('Running Dummy')
             time.sleep(1)
 
         for i in range(iterations):
-            print('Running Dummy 2! =D')
+            logger.info('Running Dummy 2! =D')
             time.sleep(1)
 
     def ask_for_path(self):
         path = tkinter.filedialog.askdirectory()
         self.project_path.set(path)
-        # self.file_picker_entry.delete(0, tk.END)
-        # self.file_picker_entry.insert(0, path)
 
     def check_all_parameters_set(self):
         try:
@@ -184,9 +257,9 @@ class Gui:
 
     def shutdown(self):
         # Helper function to shut down all stitching processes when the interface is quit
+        # TODO: Make this work on Windows
         if tk.messagebox.askokcancel("Quit", "Do you want to stop processing the experiment?"):
             self.master.destroy()
-
 
 
 def main():

@@ -211,7 +211,7 @@ class MapsXmlParser:
         if not len(logger.handlers):
             logger.setLevel(logging.INFO)
 
-            formatter = logging.Formatter('%(asctime)s : %(name)-12s : %(levelname)s : %(message)s')
+            formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
 
             # Create file logging handler
             fh = logging.FileHandler(log_file_path)
