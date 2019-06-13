@@ -39,10 +39,10 @@ Building a standalone application for stitcher
 ----------
 Example for Windows:
 ```
-pyinstaller --onefile -p fork-stitcher --add-data C:\Users\j.luethi\AppData\Local\Continuum\miniconda3\envs\fork_stitcher\share\pyjnius\pyjnius.jar;.\ForkStitcher\share\pyjnius\pyjnius.jar fork-stitcher/gui.py
+pyinstaller --onefile -p fork-stitcher --add-data C:\Users\j.luethi\AppData\Local\Continuum\miniconda3\envs\fork_stitcher\share\pyjnius\pyjnius.jar;.\share\pyjnius\pyjnius.jar fork-stitcher/gui.py
 ```
 
-Where --add-data path points to where the pyjnius JAR file is located on the local machine, followed by ./share/pyjnius/'
+Where --add-data path points to where the pyjnius JAR file is located on the local machine, followed by .\share\pyjnius\pyjnius.jar
 To find the location of pyjnius on your machine, use:
 
 ```
@@ -53,7 +53,7 @@ import scyjava
 
 Including an icon:
 ```
-pyinstaller --onefile --icon stitchericon_1_EYC_icon.ico -p fork-stitcher --add-data C:\Users\j.luethi\AppData\Local\Continuum\miniconda3\envs\fork_stitcher\share\pyjnius\pyjnius.jar;.\ForkStitcher\share\pyjnius\pyjnius.jar fork-stitcher/gui.py
+pyinstaller --onefile --icon stitchericon_1_EYC_icon.ico -p fork-stitcher --add-data C:\Users\j.luethi\AppData\Local\Continuum\miniconda3\envs\fork_stitcher\share\pyjnius\pyjnius.jar;.\share\pyjnius\pyjnius.jar fork-stitcher/gui.py
 ```
 
 
