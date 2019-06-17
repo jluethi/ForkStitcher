@@ -5,21 +5,21 @@ Repository for the tool to stitch Talos images annotated in the MAPS viewer
 
 Installation instructions
 ----------
-Dependencies are currently a bit complicated. To be able to run functions from the Stitcher or the MapsXmlParser, you need to do the following (replace virtualenv_name with the name that you want for your virtual environment):
+Dependencies are currently a bit complicated. To be able to run functions from the Stitcher or the MapsXmlParser, you need to do the following:
 
 1. Install pyimage. The installation via pip does not seem to work at the moment, but conda is working. Thus:
 ```
-conda create -n virtualenv_name python=3.7
-conda activate virtualenv_name
+conda create -n fork_stitcher python=3.7
+conda activate fork_stitcher
 conda config --add channels conda-forge 
-conda install -n virtualenv_name pyimagej openjdk=8
+conda install -n fork_stitcher pyimagej openjdk=8
 ```
 
 2. Install other dependencies into virtualenv:
 ```
-conda install -n virtualenv_name sphinx
-conda install -n virtualenv_name openpyxl
-conda install -n virtualenv_name pyyaml
+conda install -n fork_stitcher sphinx
+conda install -n fork_stitcher openpyxl
+conda install -n fork_stitcher pyyaml
 pip install StyleFrame
 ```
 
