@@ -72,7 +72,7 @@
 
 
 \title{MAPS XML Parser}
-\date{May 29, 2019}
+\date{Jun 17, 2019}
 \release{0.1.0}
 \author{Joel Luethi}
 \newcommand{\sphinxlogo}{\vbox{}}
@@ -320,6 +320,34 @@ path
 
 \end{fulllineitems}
 
+\index{create\_logger() (sites\_of\_interest\_parser.MapsXmlParser static method)@\spxentry{create\_logger()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser static method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{index:sites_of_interest_parser.MapsXmlParser.create_logger}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{static }}\sphinxbfcode{\sphinxupquote{create\_logger}}}{\emph{log\_file\_path}, \emph{multiprocessing\_logger: bool = False}}{}
+Returns a logger and creates it if it doesn’t yet exist
+
+Gets the correct logger for normal or multiprocessing. If it already exists, just returns this logger. If it
+doesn’t exist yet, sets it up correctly.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{log\_file\_path}} (\sphinxstyleliteralemphasis{\sphinxupquote{str}}) \textendash{} Path to the log file
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{multiprocessing\_logger}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether a multiprocessing logger is needed. Defaults to False.
+
+\end{itemize}
+
+\item[{Returns}] \leavevmode
+Logger object that has the correct handlers
+
+\item[{Return type}] \leavevmode
+logger
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
 \index{determine\_surrounding\_tiles() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{determine\_surrounding\_tiles()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}}
 
 \begin{fulllineitems}
@@ -332,40 +360,23 @@ of the surrounding filenames to surrounding\_tile\_names of the annotation\_tile
 
 \end{fulllineitems}
 
-\index{extract\_annotation\_locations() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{extract\_annotation\_locations()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}}
+\index{extract\_layers\_and\_annotations() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{extract\_layers\_and\_annotations()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}}
 
 \begin{fulllineitems}
-\phantomsection\label{\detokenize{index:sites_of_interest_parser.MapsXmlParser.extract_annotation_locations}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{extract\_annotation\_locations}}}{}{}
-Extract annotation metadata from the XML file
+\phantomsection\label{\detokenize{index:sites_of_interest_parser.MapsXmlParser.extract_layers_and_annotations}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{extract\_layers\_and\_annotations}}}{\emph{check\_for\_annotations: bool = True}}{}
+Extract the information about all the layers in the high magnification acquisition layers and the annotations
 
-Goes through all the LayerGroups and looks at any layer in any LayerGroup that is an Annotation Layer. Get all
-x \& y positions of the annotations \& the annotation name and save them in the annotations dictionary.
-The keys are the names of the annotations (MAPS enforces uniqueness), its values are a dictionary containing the
-StagePosition\_x \& StagePosition\_y positions of the annotation (in m =\textgreater{} global coordinate system for the
-experiment)
+Go through the XML file and submit all LayerGroups for processing. The LayerGroups contain both the Layer with
+the \_name\_of\_highmag\_layer (=\textgreater{} the actual images) as well as the Annotation Layers containing the annotations.
+At the end of processing, check whether the self.layers and the self.annotations dictionaries were filled. If
+one of them was not filled, the parser could not find the highmag images or the annotations and raises an
+exception.
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode
+\sphinxstyleliteralstrong{\sphinxupquote{check\_for\_annotations}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether the parsing should check for the existence of annotations and throw an
+error if none are found. Defaults to True, thus checking for annotations.
 
-\end{fulllineitems}
-
-\index{extract\_layer\_metadata() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{extract\_layer\_metadata()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}}
-
-\begin{fulllineitems}
-\phantomsection\label{\detokenize{index:sites_of_interest_parser.MapsXmlParser.extract_layer_metadata}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{extract\_layer\_metadata}}}{}{}
-Extract the information about all the layers in the high magnification acquisition layers
-
-Go through the XML file and look at the \_name\_of\_highmag\_layer layers group. Within that layers group, get only
-the layers (acquisitions/squares) that contain microscope images (TileLayer), not any annotation layers or
-others. Save them to the self.layers dictionary in the following way: The keys are local paths to
-the metadata about the layers and the values are dictionaries again. Each layers contains the information
-about the stage position of the center of the layers (in meters, StagePosition\_center\_x \&
-StagePosition\_center\_y), about the rotation of the layers relative to the global stage positions (in degrees,
-rotation), the number of columns of tiles (images) in the layers (columns), the vertical \& horizontal overlap
-between the tiles (overlapVertical, overlapHorizontal), the number of rows of tiles (images) in the layers
-(rows), the horizontal field width of each tile (its width in meters, tileHfw), the horizontal field width of
-the whole layers (its width in meters, totalHfw) and the name of the layers (layer\_name).
-In a calculate\_absolute\_tile\_coordinates, StagePosition\_corner\_x and StagePosition\_corner\_y are calculated and
-added to the layers dictionary.
-The parsing is quite ugly with all the if statements, because the tags have huge names and it’s easier just
-to check for what the tags end in.
+\end{description}\end{quote}
 
 \end{fulllineitems}
 
@@ -449,6 +460,39 @@ root
 
 \end{fulllineitems}
 
+\index{parse\_classifier\_output() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{parse\_classifier\_output()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{index:sites_of_interest_parser.MapsXmlParser.parse_classifier_output}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{parse\_classifier\_output}}}{\emph{file\_path}, \emph{annotation\_shift: int = 128}}{}
+Parses the output of the classifier and returns the annotation\_tiles
+
+Goes through the csv file produced by the classifier, parses the corresponding MAPS XML File and builds the
+necessary MapsXmlParser dictionaries so that they can be saved to csv afterwards. Excpects the following
+structure in the classifier csv:
+Dictionary with TileSets as keys and a dictionary as value. The value dictionary contains dictionaries for each
+tile with annotations. The name of the tile is the key and the top left corner of the annotations are the
+values, saved as a list of tuples (x,y)
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{file\_path}} (\sphinxstyleliteralemphasis{\sphinxupquote{str}}) \textendash{} Path to the classifier output csv
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{annotation\_shift}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} How much the center of the annotation is shifted from the top left corner. Defaults
+to 128 (for 256x256 images from the classifier)
+
+\end{itemize}
+
+\item[{Returns}] \leavevmode
+Dictionary of all annotation tiles
+
+\item[{Return type}] \leavevmode
+self.annotation\_tiles
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
 \index{parse\_xml() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{parse\_xml()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}}
 
 \begin{fulllineitems}
@@ -505,6 +549,12 @@ list
 \end{fulllineitems}
 
 
+\end{fulllineitems}
+
+\index{XmlParsingFailed@\spxentry{XmlParsingFailed}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{index:sites_of_interest_parser.XmlParsingFailed}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{exception }}\sphinxcode{\sphinxupquote{sites\_of\_interest\_parser.}}\sphinxbfcode{\sphinxupquote{XmlParsingFailed}}}{\emph{message}}{}
 \end{fulllineitems}
 
 \phantomsection\label{\detokenize{index:module-stitch_MAPS_annotations}}\index{stitch\_MAPS\_annotations (module)@\spxentry{stitch\_MAPS\_annotations}\spxextra{module}}\index{Stitcher (class in stitch\_MAPS\_annotations)@\spxentry{Stitcher}\spxextra{class in stitch\_MAPS\_annotations}}
@@ -624,12 +674,76 @@ list
 \index{combine\_csvs() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{combine\_csvs()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}}
 
 \begin{fulllineitems}
-\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.combine_csvs}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{combine\_csvs}}}{\emph{delete\_batches: bool = False}}{}
-Combines batch csv output files into the final csv file
+\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.combine_csvs}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{combine\_csvs}}}{\emph{delete\_batches: bool = False}, \emph{to\_excel: bool = True}}{}
+Combines batch csv output files into the final csv file and optionally an excel file
 \begin{quote}\begin{description}
-\item[{Parameters}] \leavevmode
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
 \sphinxstyleliteralstrong{\sphinxupquote{delete\_batches}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether the batch csv files should be deleted after stitching them to the combined
 csv file. Defaults to False (not deleting the batch csv files)
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{to\_excel}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether the csv file should also be saved as an excel file. Defaults to True (creating the
+Excel file)
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{local\_contrast\_enhancement() (stitch\_MAPS\_annotations.Stitcher static method)@\spxentry{local\_contrast\_enhancement()}\spxextra{stitch\_MAPS\_annotations.Stitcher static method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.local_contrast_enhancement}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{static }}\sphinxbfcode{\sphinxupquote{local\_contrast\_enhancement}}}{\emph{img\_path}, \emph{output\_path}, \emph{logger=None}, \emph{save\_img: bool = False}, \emph{eight\_bit: bool = True}, \emph{use\_norm\_local\_contrast: bool = False}, \emph{use\_CLAHE: bool = False}, \emph{return\_java\_img: bool = False}, \emph{return\_numpy\_img: bool = False}, \emph{**kwargs}}{}
+Loads an image and performs local contrast enhancement
+
+Loads the specified image, performs either NormalizeLocalContrast (default), CLAHE or no local contrast
+enhancement (in that order, thus performs NormalizeLocalContrast if both it and CLAHE are True).
+Optionally converts the image to 8bit and saves it. The parameters for NormalizeLocalContrast and
+CLAHE have default values that can be overwritten using the {\color{red}\bfseries{}**}kwargs by providing an argument with the specific
+name of the parameter to be changed
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{img\_path}} (\sphinxstyleliteralemphasis{\sphinxupquote{Path}}\sphinxstyleliteralemphasis{\sphinxupquote{ or }}\sphinxstyleliteralemphasis{\sphinxupquote{str}}) \textendash{} Full path to the image to be processed
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{output\_path}} (\sphinxstyleliteralemphasis{\sphinxupquote{Path}}\sphinxstyleliteralemphasis{\sphinxupquote{ or }}\sphinxstyleliteralemphasis{\sphinxupquote{str}}) \textendash{} Full path to where the output image should be saved (if save\_img is True)
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{logger}} (\sphinxstyleliteralemphasis{\sphinxupquote{Logging}}) \textendash{} Logging object that is configured for the logging either in multiprocessing or normal
+processing. Defaults to None, thus loading the logger
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{save\_img}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether the processed image should be saved. Defaults to False (not saving the image)
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{eight\_bit}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether the image should be converted to 8 bit . Defaults to True (converting to 8 bit)
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{use\_norm\_local\_contrast}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether NormalizeLocalContrast Fiji Plugin should be run on the image.
+Defaults to False (not running NormalizeLocalContrast on the image)
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{use\_CLAHE}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether CLAHE Fiji Plugin should be run on the image. Defaults to False (not running
+CLAHE on the image)
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{return\_java\_img}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether the function should return the java image. Defaults to False (not returning
+the image)
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{return\_numpy\_img}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether the function should return a numpy version of the image. Defaults to False
+(not returning the image)
+
+\end{itemize}
+
+\item[{Returns}] \leavevmode
+The processed image as an ImageJ1 ImagePlus image (if return\_image is True)
+
+\item[{Return type}] \leavevmode
+ImagePlus
 
 \end{description}\end{quote}
 
@@ -638,7 +752,7 @@ csv file. Defaults to False (not deleting the batch csv files)
 \index{manage\_batches() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{manage\_batches()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}}
 
 \begin{fulllineitems}
-\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.manage_batches}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{manage\_batches}}}{\emph{stitch\_threshold: int = 1000}, \emph{eight\_bit: bool = True}, \emph{max\_processes: int = 4}}{}
+\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.manage_batches}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{manage\_batches}}}{\emph{stitch\_threshold: int = 1000}, \emph{eight\_bit: bool = True}, \emph{show\_arrow: bool = True}, \emph{max\_processes: int = 4}, \emph{enhance\_contrast: bool = True}}{}
 Manages the parallelization of the stitching of batches
 
 As multiprocessing can make some issues, if max\_processes is set to 1, it does not use multiprocessing calls.
@@ -653,10 +767,55 @@ threshold, the stitching is not performed
 images as 8bit
 
 \item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{show\_arrow}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether an arrow should be added to the image overlay that points to the annotation in
+the stitched image. Defaults to True, thus adding an arrow to the overlay
+
+\item {} 
 \sphinxstyleliteralstrong{\sphinxupquote{max\_processes}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} The number of parallel processes that should be used to process the batches.
 Be careful, each batch needs a lot of memory
 
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{enhance\_contrast}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether contrast enhancement should be performed on the images before stitching.
+Defaults to True (thus enhancing contrast in the images)
+
 \end{itemize}
+
+\end{description}\end{quote}
+
+\end{fulllineitems}
+
+\index{parse\_create\_classifier\_csv\_batches() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{parse\_create\_classifier\_csv\_batches()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}}
+
+\begin{fulllineitems}
+\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.parse_create_classifier_csv_batches}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{parse\_create\_classifier\_csv\_batches}}}{\emph{batch\_size: int}, \emph{classifier\_csv\_path: str}, \emph{highmag\_layer: str = 'highmag'}}{}
+Creates the batch csv files of annotation\_tiles based on classifier output
+
+Calls the MapsXmlParser to parse the XML file of the acquisition and save the annotation\_tiles as a csv in
+batches
+\begin{quote}\begin{description}
+\item[{Parameters}] \leavevmode\begin{itemize}
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{batch\_size}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} Batch size of the csv files
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{classifier\_csv\_path}} (\sphinxstyleliteralemphasis{\sphinxupquote{str}}) \textendash{} Path to the classifier output csv file
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{highmag\_layer}} (\sphinxstyleliteralemphasis{\sphinxupquote{str}}) \textendash{} Name of the image layer in MAPS for which tiles containing annotations should
+be found. Defaults to ‘highmag’
+
+\end{itemize}
+
+\item[{Returns}] \leavevmode
+\begin{description}
+\item[{First value: The annotation\_tiles dictionary. Second value: A list of the filenames of the csv files}] \leavevmode
+that were created
+
+\end{description}
+
+
+\item[{Return type}] \leavevmode
+list
 
 \end{description}\end{quote}
 
@@ -673,7 +832,7 @@ batches
 \begin{quote}\begin{description}
 \item[{Parameters}] \leavevmode\begin{itemize}
 \item {} 
-\sphinxstyleliteralstrong{\sphinxupquote{batch\_size}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} Description of arg2
+\sphinxstyleliteralstrong{\sphinxupquote{batch\_size}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} Batch size of the csv files
 
 \item {} 
 \sphinxstyleliteralstrong{\sphinxupquote{highmag\_layer}} (\sphinxstyleliteralemphasis{\sphinxupquote{str}}) \textendash{} Name of the image layer in MAPS for which tiles containing annotations should
@@ -699,7 +858,7 @@ list
 \index{process\_stitching\_params() (stitch\_MAPS\_annotations.Stitcher static method)@\spxentry{process\_stitching\_params()}\spxextra{stitch\_MAPS\_annotations.Stitcher static method}}
 
 \begin{fulllineitems}
-\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.process_stitching_params}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{static }}\sphinxbfcode{\sphinxupquote{process\_stitching\_params}}}{\emph{stitch\_params}, \emph{annotation\_coordinates}, \emph{stitch\_threshold}, \emph{original\_positions}, \emph{center\_index: int}}{}
+\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.process_stitching_params}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{static }}\sphinxbfcode{\sphinxupquote{process\_stitching\_params}}}{\emph{stitch\_params}, \emph{annotation\_coordinates}, \emph{stitch\_threshold}, \emph{original\_positions}, \emph{center\_index: int}, \emph{logger}}{}
 Calculates the position of the annotation in the stitched image and decides if stitching worked well
 
 Based on the stitch\_threshold, this function decides whether the stitching has worked well. If any image was
@@ -723,6 +882,10 @@ calculate the shift by stitching
 \sphinxstyleliteralstrong{\sphinxupquote{center\_index}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} Index of which tile in the stitched image was the original center. Used to calculate
 the position of the annotation in the stitched image
 
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{logger}} (\sphinxstyleliteralemphasis{\sphinxupquote{Logging}}) \textendash{} Logging object that is configured for the logging either in multiprocessing or normal
+processing
+
 \end{itemize}
 
 \item[{Returns}] \leavevmode
@@ -743,7 +906,7 @@ list
 \index{stitch\_annotated\_tiles() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{stitch\_annotated\_tiles()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}}
 
 \begin{fulllineitems}
-\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.stitch_annotated_tiles}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{stitch\_annotated\_tiles}}}{\emph{annotation\_tiles: dict}, \emph{stitch\_threshold: int = 1000}, \emph{eight\_bit: bool = True}}{}
+\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.stitch_annotated_tiles}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{stitch\_annotated\_tiles}}}{\emph{annotation\_tiles: dict}, \emph{logger}, \emph{stitch\_threshold: int = 1000}, \emph{eight\_bit: bool = True}, \emph{show\_arrow: bool = True}, \emph{enhance\_contrast: bool = True}}{}
 Stitches 3x3 images for all annotations in annotation\_tiles
 
 Goes through all annotations in annotation\_tiles dict, load the center file and the existing surrounding files.
@@ -762,12 +925,24 @@ Annotation\_tile\_img\_position\_y, surrounding\_tile\_names \& surrounding\_til
 to work
 
 \item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{logger}} (\sphinxstyleliteralemphasis{\sphinxupquote{Logging}}) \textendash{} Logging object that is configured for the logging either in multiprocessing or normal
+processing
+
+\item {} 
 \sphinxstyleliteralstrong{\sphinxupquote{stitch\_threshold}} (\sphinxstyleliteralemphasis{\sphinxupquote{int}}) \textendash{} Threshold to judge stitching quality by. If images would be moved more than this
 threshold, the stitching is not performed
 
 \item {} 
 \sphinxstyleliteralstrong{\sphinxupquote{eight\_bit}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
 images as 8bit
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{show\_arrow}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether an arrow should be added to the image overlay that points to the annotation in
+the stitched image. Defaults to True, thus adding an arrow to the overlay
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{enhance\_contrast}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether contrast enhancement should be performed on the images before stitching.
+Defaults to True (thus enhancing contrast in the images)
 
 \end{itemize}
 
@@ -784,7 +959,7 @@ dict
 \index{stitch\_batch() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{stitch\_batch()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}}
 
 \begin{fulllineitems}
-\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.stitch_batch}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{stitch\_batch}}}{\emph{annotation\_csv\_path}, \emph{stitch\_threshold: int = 1000}, \emph{eight\_bit: bool = True}}{}
+\phantomsection\label{\detokenize{index:stitch_MAPS_annotations.Stitcher.stitch_batch}}\pysiglinewithargsret{\sphinxbfcode{\sphinxupquote{stitch\_batch}}}{\emph{annotation\_csv\_path}, \emph{stitch\_threshold: int = 1000}, \emph{eight\_bit: bool = True}, \emph{show\_arrow: bool = True}, \emph{enhance\_contrast: bool = True}, \emph{multiprocessing\_logger: bool = False}}{}
 Submits the stitching of a batch, the writing of an updated csv file and the deletion of the old csv file
 \begin{quote}\begin{description}
 \item[{Parameters}] \leavevmode\begin{itemize}
@@ -798,6 +973,18 @@ threshold, the stitching is not performed
 \item {} 
 \sphinxstyleliteralstrong{\sphinxupquote{eight\_bit}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
 images as 8bit
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{show\_arrow}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether an arrow should be added to the image overlay that points to the annotation in
+the stitched image. Defaults to True, thus adding an arrow to the overlay
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{enhance\_contrast}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether contrast enhancement should be performed on the images before stitching.
+Defaults to True (thus enhancing contrast in the images)
+
+\item {} 
+\sphinxstyleliteralstrong{\sphinxupquote{multiprocessing\_logger}} (\sphinxstyleliteralemphasis{\sphinxupquote{bool}}) \textendash{} Whether a multiprocessing logger or a normal logger should be used. Defaults
+to False, thus using a normal logger
 
 \end{itemize}
 

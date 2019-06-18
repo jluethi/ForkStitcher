@@ -1,7 +1,7 @@
 This is makeindex, version 2.15 [TeX Live 2017] (kpathsea + Thai support).
 Scanning style file ./python.ist.......done (7 attributes redefined, 0 ignored).
-Scanning input file mapsxmlparser.idx....done (37 entries accepted, 0 rejected).
-Sorting entries....done (196 comparisons).
-Generating output file mapsxmlparser.ind....done (118 lines written, 0 warnings).
+Scanning input file mapsxmlparser.idx....done (41 entries accepted, 0 rejected).
+Sorting entries....done (227 comparisons).
+Generating output file mapsxmlparser.ind....done (128 lines written, 0 warnings).
 Output written in mapsxmlparser.ind.
 Transcript written in mapsxmlparser.ilg.

@@ -12,26 +12,30 @@
 \indexentry{calculate\_absolute\_tile\_coordinates() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{calculate\_absolute\_tile\_coordinates()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{2}
 \indexentry{convert\_img\_path\_to\_local\_path() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{convert\_img\_path\_to\_local\_path()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{2}
 \indexentry{convert\_windows\_pathstring\_to\_path\_object() (sites\_of\_interest\_parser.MapsXmlParser static method)@\spxentry{convert\_windows\_pathstring\_to\_path\_object()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser static method}|hyperpage}{2}
+\indexentry{create\_logger() (sites\_of\_interest\_parser.MapsXmlParser static method)@\spxentry{create\_logger()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser static method}|hyperpage}{3}
 \indexentry{determine\_surrounding\_tiles() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{determine\_surrounding\_tiles()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{3}
-\indexentry{extract\_annotation\_locations() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{extract\_annotation\_locations()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{3}
-\indexentry{extract\_layer\_metadata() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{extract\_layer\_metadata()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{3}
+\indexentry{extract\_layers\_and\_annotations() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{extract\_layers\_and\_annotations()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{3}
 \indexentry{find\_annotation\_tile() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{find\_annotation\_tile()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{3}
 \indexentry{get\_relative\_tile\_locations() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{get\_relative\_tile\_locations()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{3}
-\indexentry{load\_annotations\_from\_csv() (sites\_of\_interest\_parser.MapsXmlParser static method)@\spxentry{load\_annotations\_from\_csv()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser static method}|hyperpage}{3}
+\indexentry{load\_annotations\_from\_csv() (sites\_of\_interest\_parser.MapsXmlParser static method)@\spxentry{load\_annotations\_from\_csv()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser static method}|hyperpage}{4}
 \indexentry{load\_xml() (sites\_of\_interest\_parser.MapsXmlParser static method)@\spxentry{load\_xml()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser static method}|hyperpage}{4}
+\indexentry{parse\_classifier\_output() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{parse\_classifier\_output()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{4}
 \indexentry{parse\_xml() (sites\_of\_interest\_parser.MapsXmlParser method)@\spxentry{parse\_xml()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser method}|hyperpage}{4}
 \indexentry{save\_annotation\_tiles\_to\_csv() (sites\_of\_interest\_parser.MapsXmlParser static method)@\spxentry{save\_annotation\_tiles\_to\_csv()}\spxextra{sites\_of\_interest\_parser.MapsXmlParser static method}|hyperpage}{4}
-\indexentry{stitch\_MAPS\_annotations (module)@\spxentry{stitch\_MAPS\_annotations}\spxextra{module}|hyperpage}{4}
-\indexentry{Stitcher (class in stitch\_MAPS\_annotations)@\spxentry{Stitcher}\spxextra{class in stitch\_MAPS\_annotations}|hyperpage}{4}
+\indexentry{XmlParsingFailed@\spxentry{XmlParsingFailed}|hyperpage}{5}
+\indexentry{stitch\_MAPS\_annotations (module)@\spxentry{stitch\_MAPS\_annotations}\spxextra{module}|hyperpage}{5}
+\indexentry{Stitcher (class in stitch\_MAPS\_annotations)@\spxentry{Stitcher}\spxextra{class in stitch\_MAPS\_annotations}|hyperpage}{5}
 \indexentry{stitch\_radius (stitch\_MAPS\_annotations.Stitcher attribute)@\spxentry{stitch\_radius}\spxextra{stitch\_MAPS\_annotations.Stitcher attribute}|hyperpage}{5}
 \indexentry{project\_name (stitch\_MAPS\_annotations.Stitcher attribute)@\spxentry{project\_name}\spxextra{stitch\_MAPS\_annotations.Stitcher attribute}|hyperpage}{5}
 \indexentry{project\_folder\_path (stitch\_MAPS\_annotations.Stitcher attribute)@\spxentry{project\_folder\_path}\spxextra{stitch\_MAPS\_annotations.Stitcher attribute}|hyperpage}{5}
 \indexentry{output\_path (stitch\_MAPS\_annotations.Stitcher attribute)@\spxentry{output\_path}\spxextra{stitch\_MAPS\_annotations.Stitcher attribute}|hyperpage}{5}
 \indexentry{csv\_base\_path (stitch\_MAPS\_annotations.Stitcher attribute)@\spxentry{csv\_base\_path}\spxextra{stitch\_MAPS\_annotations.Stitcher attribute}|hyperpage}{5}
-\indexentry{base\_header (stitch\_MAPS\_annotations.Stitcher attribute)@\spxentry{base\_header}\spxextra{stitch\_MAPS\_annotations.Stitcher attribute}|hyperpage}{5}
-\indexentry{combine\_csvs() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{combine\_csvs()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{5}
-\indexentry{manage\_batches() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{manage\_batches()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{5}
-\indexentry{parse\_create\_csv\_batches() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{parse\_create\_csv\_batches()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{6}
-\indexentry{process\_stitching\_params() (stitch\_MAPS\_annotations.Stitcher static method)@\spxentry{process\_stitching\_params()}\spxextra{stitch\_MAPS\_annotations.Stitcher static method}|hyperpage}{6}
-\indexentry{stitch\_annotated\_tiles() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{stitch\_annotated\_tiles()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{6}
-\indexentry{stitch\_batch() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{stitch\_batch()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{7}
+\indexentry{base\_header (stitch\_MAPS\_annotations.Stitcher attribute)@\spxentry{base\_header}\spxextra{stitch\_MAPS\_annotations.Stitcher attribute}|hyperpage}{6}
+\indexentry{combine\_csvs() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{combine\_csvs()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{6}
+\indexentry{local\_contrast\_enhancement() (stitch\_MAPS\_annotations.Stitcher static method)@\spxentry{local\_contrast\_enhancement()}\spxextra{stitch\_MAPS\_annotations.Stitcher static method}|hyperpage}{6}
+\indexentry{manage\_batches() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{manage\_batches()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{7}
+\indexentry{parse\_create\_classifier\_csv\_batches() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{parse\_create\_classifier\_csv\_batches()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{7}
+\indexentry{parse\_create\_csv\_batches() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{parse\_create\_csv\_batches()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{7}
+\indexentry{process\_stitching\_params() (stitch\_MAPS\_annotations.Stitcher static method)@\spxentry{process\_stitching\_params()}\spxextra{stitch\_MAPS\_annotations.Stitcher static method}|hyperpage}{8}
+\indexentry{stitch\_annotated\_tiles() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{stitch\_annotated\_tiles()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{8}
+\indexentry{stitch\_batch() (stitch\_MAPS\_annotations.Stitcher method)@\spxentry{stitch\_batch()}\spxextra{stitch\_MAPS\_annotations.Stitcher method}|hyperpage}{9}
