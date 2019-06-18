@@ -776,8 +776,10 @@ class MapsXmlParser:
             csv_reader = csv.reader(csv_file, delimiter=',')
             for tile_set in csv_reader:
                 tile_set_name = tile_set[0]
-                annotations_per_tileset[tile_set_name] = ast.literal_eval(tile_set[1])
-
+                tile = ast.literal_eval(tile_set[1])
+                tile_name = list(tile.keys())[0]
+                tile_key = tile_set_name + '_' + tile_name
+                annotations_per_tileset[tile_key] = tile
         # Parse the MAPS experiment (without annotations) to get the positions of all tiles
         self.extract_layers_and_annotations(check_for_annotations=False)
         self.get_relative_tile_locations()
@@ -786,12 +788,14 @@ class MapsXmlParser:
         # Map the annotations to the corresponding tiles
         for current_tile_set in annotations_per_tileset:
             for tile in annotations_per_tileset[current_tile_set]:
-                tile_key = current_tile_set + '_' + tile
-                current_tile = self.tiles[tile_key]
-                for annotation in annotations_per_tileset[current_tile_set][tile]:
+                current_tile = self.tiles[current_tile_set]
+                for annotation_key in annotations_per_tileset[current_tile_set][tile]:
                     # Get Annotation_Names => Create increasing names
                     annotation_index += 1
                     annotation_name = base_annotation_name + str(annotation_index).zfill(5)
+                    annotation = annotations_per_tileset[current_tile_set][tile][annotation_key]
+                    # The annotation tuple could contain more info (e.g. probability) that is not currently
+                    # saved anywhere
 
                     self.annotation_tiles[annotation_name] = copy.deepcopy(current_tile)
                     self.annotation_tiles[annotation_name]['pixel_size'] = self.pixel_size
@@ -799,10 +803,10 @@ class MapsXmlParser:
                     # the tile of interest and the classifier output already provides that, it's not done here
                     self.annotation_tiles[annotation_name]['Annotation_StagePosition_x'] = None
                     self.annotation_tiles[annotation_name]['Annotation_StagePosition_y'] = None
-                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_x'] = annotation[0] \
+                    # x & y were inverted in the classifier => revert them back
+                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_x'] = annotation[1] \
                                                                                                + annotation_shift
-                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_y'] = annotation[1] \
+                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_y'] = annotation[0] \
                                                                                                + annotation_shift
         self.determine_surrounding_tiles()
-
         return self.annotation_tiles
