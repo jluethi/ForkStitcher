@@ -67,7 +67,7 @@ class Stitcher:
                             'size reversed fork (nm)', 'dsDNA RF', 'internal ssDNA RF', 'ssDNA end RF',
                             'total ssDNA RF	gaps', 'gaps', 'sister	gaps', 'parental', 'size gaps (nm)',
                             'junction ssDNA size (nm)', 'hemicatenane', 'termination intermediate', 'bubble',
-                            'hemireplicated bubble', 'comments', 'list for reversed forks (nt)', 'list for gaps (nt)',
+                            'hemireplicated bubble', 'list for reversed forks (nt)', 'list for gaps (nt)',
                             'list for ssDNA at junction (nt)', 'Remarks',
                             ]
 
@@ -128,6 +128,8 @@ class Stitcher:
             if number_existing_neighbor_tiles == 9:
                 positions = [[0.0, 0.0], [3686.0, 0.0], [7373.0, 0.0], [0.0, 3686.0], [3686.0, 3686.0],
                              [7373.0, 3686.0], [0.0, 7373.0], [3686.0, 7373.0], [7373.0, 7373.0]]
+                # TODO: Change center_index calculation to: Sum of existing tiles before the center tile, based on the
+                #  surrounding_tile_exists list
                 center_index = 4
             # Edge tile: Top or bottom row is missing
             elif annotation_tiles[annotation_name]['surrounding_tile_exists'] == [True, True, True, True, True, True,

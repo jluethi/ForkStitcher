@@ -104,6 +104,7 @@ class Gui:
         menu.add_cascade(label='Edit', menu=edit_menu)
         edit_menu.add_command(label='Reset to default', command=self.reset_parameters)
 
+        # ***** User Inputs *****
         file_picker_label = tk.Label(master, text='Project Folder')
         self.project_path = tk.StringVar()
         self.file_picker_entry = tk.Entry(master, textvariable=self.project_path, width=30)
@@ -120,7 +121,9 @@ class Gui:
         self.csv_picker_label = tk.Label(master, text='Classifier CSV File')
         self.csv_path = tk.StringVar()
         self.csv_picker_entry = tk.Entry(master, textvariable=self.csv_path, width=30)
-        self.csv_picker_button = tk.Button(master, text='Choose Directory', command=self.ask_for_file)
+        self.csv_picker_button = tk.Button(master, text='Choose CSV File', command=self.ask_for_file)
+
+        # TODO: Add label: Advanced options in bold
 
         # TODO: Find out how to hide some options by default
         # Advanced options in a dropdown
@@ -198,9 +201,9 @@ class Gui:
             logger = MapsXmlParser.create_logger(log_file_path)
             logger.info('Process experiment {}'.format(project_name))
 
-            thread = threading.Thread(target=self.dummy, args=(20, ))
-            thread.daemon = True
-            thread.start()
+            # thread = threading.Thread(target=self.dummy, args=(20, ))
+            # thread.daemon = True
+            # thread.start()
             thread = threading.Thread(target=self.run_from_beginning, args=(base_path, project_name,))
             thread.daemon = True
             thread.start()
@@ -323,18 +326,10 @@ def main():
 
     p = Gui(root)
     root.protocol("WM_DELETE_WINDOW", p.shutdown)
+
+    # Run gui until user terminates the program
     root.mainloop()
 
 
 if __name__ == "__main__":
     main()
-
-# # ***** Toolbar *****
-# toolbar = tk.Frame(master, bg='blue')
-# reset_button = tk.Button(toolbar, text='Reset Parameters', command=self.reset_parameters)
-# reset_button.pack(side=tk.LEFT, dadx=2, pady=2)
-# toolbar.grid()
-
-# # ***** Status Bar *****
-# status = tk.Label(master, text='Fill in Options', bd=1, relief=tk.SUNKEN, anchor=tk.W)
-# status.grid(row=3, columnspan=2)
