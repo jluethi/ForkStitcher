@@ -9,7 +9,9 @@ Dependencies are currently a bit complicated. To be able to run functions from t
 
 1. If you don't already have it, install Miniconda on your system. Follow the instructions here: https://docs.conda.io/en/latest/miniconda.html
 
-2. Install pyimage. The installation via pip does not seem to work at the moment, but conda is working. Thus:
+2. Start the Anaconda Prompt program and install all dependencies there.
+
+3. Install pyimage. The installation via pip does not seem to work at the moment, but conda is working. Thus:
 ```
 conda create -n fork_stitcher python=3.7
 conda activate fork_stitcher
@@ -17,7 +19,7 @@ conda config --add channels conda-forge
 conda install -n fork_stitcher pyimagej openjdk=8
 ```
 
-3. Install other dependencies into virtualenv:
+4. Install other dependencies into virtualenv:
 ```
 conda install -n fork_stitcher sphinx
 conda install -n fork_stitcher openpyxl
@@ -25,8 +27,23 @@ conda install -n fork_stitcher pyyaml
 pip install StyleFrame
 ```
 
-4. Directly call code from within a python script or start the user interfaces by running the gui.py script.
+5. Directly call code from within a python script or start the user interfaces by running the gui.py script.
 **Warning: When importing stitch_MAPS_annotations for the first time, it takes a while (minutes) to get the ImageJ Fiji distribution from Maven. It doesn't print anything during that, just wait for it to get the ImageJ distribution.** On later runs, it takes a few seconds to initialize the ImageJ environment
+
+
+Quick run
+----------
+1. Start the Anaconda Prompt program and activate your virtual environment:
+```
+conda activate fork_stitcher
+```
+
+2. Go to the ForkStitcher\fork-stitcher folder and type:
+```
+python gui.py
+```
+
+
 
 Documentation
 ----------
