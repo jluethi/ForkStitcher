@@ -8,13 +8,6 @@ import time
 import logging
 import threading
 import queue
-import os
-import multiprocessing
-import sys
-
-if getattr(sys, 'frozen', False):
-    os.environ['JAVA_HOME'] = os.path.join(os.getcwd(), 'share\\jdk8u212-b04')
-    os.environ['PATH'] = os.path.join(os.getcwd(), 'share\\jdk8u212-b04\\jre\\bin') + os.pathsep + os.path.join(os.getcwd(), 'share\\jdk8u212-b04\\jre\\bin\\server') + os.pathsep + os.path.join(os.getcwd(), 'share\\apache-maven-3.6.1\\bin') + os.pathsep + os.environ['PATH']
 
 from stitch_MAPS_annotations import Stitcher
 from sites_of_interest_parser import MapsXmlParser
@@ -316,24 +309,3 @@ class Gui:
         # Helper function to shut down all stitching processes when the interface is quit
         if tk.messagebox.askokcancel("Quit", "Do you want to stop processing the experiment?"):
             self.master.destroy()
-
-
-def main():
-    # On Windows calling this function is necessary. See here:
-    # https://stackoverflow.com/questions/404744/determining-application-path-in-a-python-exe-generated-by-pyinstaller
-    multiprocessing.freeze_support()
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
-    root = tk.Tk()
-    root.title('Fork Stitcher')
-
-    root.geometry("+2000+0")
-
-    p = Gui(root)
-    root.protocol("WM_DELETE_WINDOW", p.shutdown)
-
-    # Run gui until user terminates the program
-    root.mainloop()
-
-
-if __name__ == "__main__":
-    main()
