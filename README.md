@@ -38,6 +38,9 @@ pip install StyleFrame
 
 Quick run
 ----------
+If a compiled program is available: Leave the Stitcher.exe in its folder, create a shortcut to it (right click, create Shortcut). Place the shortcut on your Desktop. Double click the shortcut to start the stitcher.
+
+If no compiled program is available, start the Stitcher via the command line:
 1. Start the Anaconda Prompt program and activate your virtual environment:
 ```
 conda activate fork_stitcher
@@ -47,7 +50,7 @@ conda activate fork_stitcher
 ```
 cd ForkStitcher
 cd fork-stitcher
-python gui.py
+python Stitcher.py
 ```
 
 
