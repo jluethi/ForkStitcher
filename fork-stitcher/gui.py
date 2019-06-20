@@ -8,12 +8,13 @@ import time
 import logging
 import threading
 import queue
+import os
+import multiprocessing
+import sys
 
-# os.environ['JAVA_HOME'] = '.\\share'
-# os.environ['PATH'] += os.pathsep + '.\\share\\apache-maven-3.6.1\\bin'
-# os.environ['M2_HOME'] = '.\\share\\apache-maven-3.6.1\\bin'
-# os.environ['MAVEN_HOME'] = '.\\share\\apache-maven-3.6.1\\bin'
-# logging.basicConfig(level=logging.DEBUG)
+if getattr(sys, 'frozen', False):
+    os.environ['JAVA_HOME'] = os.path.join(os.getcwd(), 'share\\jdk8u212-b04')
+    os.environ['PATH'] = os.path.join(os.getcwd(), 'share\\jdk8u212-b04\\jre\\bin') + os.pathsep + os.path.join(os.getcwd(), 'share\\jdk8u212-b04\\jre\\bin\\server') + os.pathsep + os.path.join(os.getcwd(), 'share\\apache-maven-3.6.1\\bin') + os.pathsep + os.environ['PATH']
 
 from stitch_MAPS_annotations import Stitcher
 from sites_of_interest_parser import MapsXmlParser
@@ -176,7 +177,7 @@ class Gui:
 
     def reset_parameters(self):
         self.project_path.set('')
-        self.max_processes.set(3)
+        self.max_processes.set(5)
         self.eight_bit.set(True)
         self.batch_size.set(5)
         self.output_folder.set('stitchedForks_test')
@@ -318,6 +319,9 @@ class Gui:
 
 
 def main():
+    # On Windows calling this function is necessary. See here:
+    # https://stackoverflow.com/questions/404744/determining-application-path-in-a-python-exe-generated-by-pyinstaller
+    multiprocessing.freeze_support()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
     root = tk.Tk()
     root.title('Fork Stitcher')
