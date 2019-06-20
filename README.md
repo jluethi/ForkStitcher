@@ -63,34 +63,38 @@ make html
 
 Building a standalone application for stitcher
 ----------
-Example for Windows:
+You need to install all dependencies for the Stitcher as described above. I recommend testing whether everything is working by using the Quick run instructions afterwards.
+
+**For Windows:**
+
+Edit the Stitcher.spec file:
+- change pathex to your local path of the git directory
+- datas needs to contain 3 paths. Change the source (the first of the two entries) to where those are on your local system and leave the target.
+  1. Path to pyjnius.jar. You can run the following from python (within your conda virtualenv) to find the pyjnius.jar (should be somewhere in your virtualenv):
+  ```
+  import logging
+  logging.basicConfig(level=logging.DEBUG)
+  import scyjava
+  ```
+  2. Path to an openjdk 8. I recommend downloading the zip version for your system from here: https://adoptopenjdk.net/releases.html#x64_win
+  
+  3. Path to maven. I recommend downloading the binary zip from here: https://maven.apache.org/download.cgi 
+  
+To create an executable:
 ```
-pyinstaller --onefile -p fork-stitcher --add-data C:\Users\j.luethi\AppData\Local\Continuum\miniconda3\envs\fork_stitcher\share\pyjnius\pyjnius.jar;.\share\pyjnius\pyjnius.jar fork-stitcher/gui.py
+conda activate fork_stitcher
+cd path\to\ForkStitcher
+pyinstaller Stitcher.spec
 ```
 
-Where --add-data path points to where the pyjnius JAR file is located on the local machine, followed by .\share\pyjnius\pyjnius.jar
-To find the location of pyjnius on your machine, use:
-
-```
-import logging
-logging.basicConfig(level=logging.DEBUG)
-import scyjava
-```
-
-Including an icon:
-```
-pyinstaller --onefile --icon stitchericon_1_EYC_icon.ico -p fork-stitcher --add-data C:\Users\j.luethi\AppData\Local\Continuum\miniconda3\envs\fork_stitcher\share\pyjnius\pyjnius.jar;.\share\pyjnius\pyjnius.jar fork-stitcher/gui.py
-```
+**IMPORTANT**: Go into the dist\Stitcher folder. Manually delete the jvm.dll file. Then, you have a working Stitcher.exe in the dist\Stitcher folder. Just don't move the .exe file out of the folder (Shortcuts are fine though).
 
 
-On Mac:
-: instead of ; in the --add-data path and '' around the path
-Folder version:
+**For Mac:**
+
+The User Interface does not work on Mac because of an issue with pyimage and tkinter. See here for details and ideas on how to work around it: https://github.com/imagej/pyimagej/issues/39
 ```
 pyinstaller -p fork-stitcher --add-data '/miniconda3/envs/fork_stitcher/share/pyjnius/pyjnius.jar:./share/pyjnius/' fork-stitcher/run_stitching_batches.py
 ```
+Where --add-data path points to where the pyjnius JAR file is located on the local machine
 
-One File Option:
-```
-pyinstaller --onefile -p fork-stitcher --add-data '/miniconda3/envs/fork_stitcher/share/pyjnius/pyjnius.jar:./share/pyjnius/' fork-stitcher/run_stitching_batches.py
-```
