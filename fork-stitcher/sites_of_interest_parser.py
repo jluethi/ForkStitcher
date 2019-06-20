@@ -11,6 +11,8 @@ from pathlib import Path
 import logging
 import copy
 import multiprocessing
+import unicodedata
+import random
 
 
 class XmlParsingFailed(Exception):
@@ -407,7 +409,7 @@ class MapsXmlParser:
             if potential_annotation_content.tag.endswith('isArea') and potential_annotation_content.text == 'false':
                 for annotation_content in annotation_layer:
                     if annotation_content.tag.endswith('RealDisplayName'):
-                        annotation_name = annotation_content.text
+                        annotation_name = self.create_valid_name(annotation_content.text)
                         self.annotations[annotation_name] = {}
                 try:
                     for annotation_content in annotation_layer:
@@ -767,6 +769,7 @@ class MapsXmlParser:
 
         Returns:
             self.annotation_tiles: Dictionary of all annotation tiles
+
         """
         # Load the csv containing classifier info
         base_annotation_name = 'Fork_'
@@ -810,3 +813,34 @@ class MapsXmlParser:
                                                                                                + annotation_shift
         self.determine_surrounding_tiles()
         return self.annotation_tiles
+
+    def create_valid_name(self, name: str):
+        """Creates a valid annotation name based on a string input
+
+        Because the annotation name will become the filename of the stitched images, this function parses annotation
+        names and ensures that they are safe filenames. Characters like ?!~ etc. are replaced by _random_number.
+        The random number is chosen between 0 and 9 (to make it unlikely to overwrite an existing annotation name.
+        See here for more: https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
+
+        Args:
+            name (str): Name of the annotation parsed from MAPS
+
+        Returns:
+            output_name: String of the name that is safe to be used as a filename
+
+        """
+        name = unicodedata.normalize('NFKD', name)
+        valid_chars = '-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        output_name = ''
+        for c in name:
+            if c in valid_chars:
+                output_name += c
+            else:
+                output_name += '_' + str(random.randint(0, 9))
+
+        if output_name != name:
+            log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
+            logger = self.create_logger(log_file_path)
+            logger.warning('{} is not a valid filename, because it cannot be made into a filename. It has been changed '
+                           'to {}'.format(name, output_name))
+        return output_name
