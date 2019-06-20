@@ -239,6 +239,28 @@ objects out of them.</p>
 </dl>
 </dd></dl>
 
+<dl class="staticmethod">
+<dt id="sites_of_interest_parser.MapsXmlParser.create_logger">
+<em class="property">static </em><code class="descname">create_logger</code><span class="sig-paren">(</span><em>log_file_path</em>, <em>multiprocessing_logger: bool = False</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.create_logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a logger and creates it if it doesn’t yet exist</p>
+<p>Gets the correct logger for normal or multiprocessing. If it already exists, just returns this logger. If it
+doesn’t exist yet, sets it up correctly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>log_file_path</strong> (<em>str</em>) – Path to the log file</p></li>
+<li><p><strong>multiprocessing_logger</strong> (<em>bool</em>) – Whether a multiprocessing logger is needed. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Logger object that has the correct handlers</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>logger</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="method">
 <dt id="sites_of_interest_parser.MapsXmlParser.determine_surrounding_tiles">
 <code class="descname">determine_surrounding_tiles</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.determine_surrounding_tiles" title="Permalink to this definition">¶</a></dt>
@@ -249,34 +271,20 @@ of the surrounding filenames to surrounding_tile_names of the annotation_tiles d
 </dd></dl>
 
 <dl class="method">
-<dt id="sites_of_interest_parser.MapsXmlParser.extract_annotation_locations">
-<code class="descname">extract_annotation_locations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.extract_annotation_locations" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract annotation metadata from the XML file</p>
-<p>Goes through all the LayerGroups and looks at any layer in any LayerGroup that is an Annotation Layer. Get all
-x &amp; y positions of the annotations &amp; the annotation name and save them in the annotations dictionary.
-The keys are the names of the annotations (MAPS enforces uniqueness), its values are a dictionary containing the
-StagePosition_x &amp; StagePosition_y positions of the annotation (in m =&gt; global coordinate system for the
-experiment)</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="sites_of_interest_parser.MapsXmlParser.extract_layer_metadata">
-<code class="descname">extract_layer_metadata</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.extract_layer_metadata" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract the information about all the layers in the high magnification acquisition layers</p>
-<p>Go through the XML file and look at the _name_of_highmag_layer layers group. Within that layers group, get only
-the layers (acquisitions/squares) that contain microscope images (TileLayer), not any annotation layers or
-others. Save them to the self.layers dictionary in the following way: The keys are local paths to
-the metadata about the layers and the values are dictionaries again. Each layers contains the information
-about the stage position of the center of the layers (in meters, StagePosition_center_x &amp;
-StagePosition_center_y), about the rotation of the layers relative to the global stage positions (in degrees,
-rotation), the number of columns of tiles (images) in the layers (columns), the vertical &amp; horizontal overlap
-between the tiles (overlapVertical, overlapHorizontal), the number of rows of tiles (images) in the layers
-(rows), the horizontal field width of each tile (its width in meters, tileHfw), the horizontal field width of
-the whole layers (its width in meters, totalHfw) and the name of the layers (layer_name).
-In a calculate_absolute_tile_coordinates, StagePosition_corner_x and StagePosition_corner_y are calculated and
-added to the layers dictionary.
-The parsing is quite ugly with all the if statements, because the tags have huge names and it’s easier just
-to check for what the tags end in.</p>
+<dt id="sites_of_interest_parser.MapsXmlParser.extract_layers_and_annotations">
+<code class="descname">extract_layers_and_annotations</code><span class="sig-paren">(</span><em>check_for_annotations: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.extract_layers_and_annotations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the information about all the layers in the high magnification acquisition layers and the annotations</p>
+<p>Go through the XML file and submit all LayerGroups for processing. The LayerGroups contain both the Layer with
+the _name_of_highmag_layer (=&gt; the actual images) as well as the Annotation Layers containing the annotations.
+At the end of processing, check whether the self.layers and the self.annotations dictionaries were filled. If
+one of them was not filled, the parser could not find the highmag images or the annotations and raises an
+exception.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>check_for_annotations</strong> (<em>bool</em>) – Whether the parsing should check for the existence of annotations and throw an
+error if none are found. Defaults to True, thus checking for annotations.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
@@ -346,6 +354,33 @@ Parses the string of a list for surrounding_tile_exists &amp; surrounding_tile_n
 </dd></dl>
 
 <dl class="method">
+<dt id="sites_of_interest_parser.MapsXmlParser.parse_classifier_output">
+<code class="descname">parse_classifier_output</code><span class="sig-paren">(</span><em>file_path</em>, <em>annotation_shift: int = 128</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.parse_classifier_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parses the output of the classifier and returns the annotation_tiles</p>
+<p>Goes through the csv file produced by the classifier, parses the corresponding MAPS XML File and builds the
+necessary MapsXmlParser dictionaries so that they can be saved to csv afterwards. Excpects the following
+structure in the classifier csv:
+Dictionary with TileSets as keys and a dictionary as value. The value dictionary contains dictionaries for each
+tile with annotations. The name of the tile is the key and the top left corner of the annotations are the
+values, saved as a list of tuples (x,y)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_path</strong> (<em>str</em>) – Path to the classifier output csv</p></li>
+<li><p><strong>annotation_shift</strong> (<em>int</em>) – How much the center of the annotation is shifted from the top left corner. Defaults
+to 128 (for 256x256 images from the classifier)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dictionary of all annotation tiles</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>self.annotation_tiles</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
 <dt id="sites_of_interest_parser.MapsXmlParser.parse_xml">
 <code class="descname">parse_xml</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.MapsXmlParser.parse_xml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run function for the class</p>
@@ -388,6 +423,11 @@ Otherwise, the dataframe is divided into batches of batch_size and saved to sepa
 </dd></dl>
 
 </dd></dl>
+
+<dl class="exception">
+<dt id="sites_of_interest_parser.XmlParsingFailed">
+<em class="property">exception </em><code class="descclassname">sites_of_interest_parser.</code><code class="descname">XmlParsingFailed</code><span class="sig-paren">(</span><em>message</em><span class="sig-paren">)</span><a class="headerlink" href="#sites_of_interest_parser.XmlParsingFailed" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <span class="target" id="module-stitch_MAPS_annotations"></span><dl class="class">
 <dt id="stitch_MAPS_annotations.Stitcher">
@@ -482,19 +522,60 @@ annotations and for measurements made on them)</p>
 
 <dl class="method">
 <dt id="stitch_MAPS_annotations.Stitcher.combine_csvs">
-<code class="descname">combine_csvs</code><span class="sig-paren">(</span><em>delete_batches: bool = False</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.combine_csvs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Combines batch csv output files into the final csv file</p>
+<code class="descname">combine_csvs</code><span class="sig-paren">(</span><em>delete_batches: bool = False</em>, <em>to_excel: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.combine_csvs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combines batch csv output files into the final csv file and optionally an excel file</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>delete_batches</strong> (<em>bool</em>) – Whether the batch csv files should be deleted after stitching them to the combined
-csv file. Defaults to False (not deleting the batch csv files)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>delete_batches</strong> (<em>bool</em>) – Whether the batch csv files should be deleted after stitching them to the combined
+csv file. Defaults to False (not deleting the batch csv files)</p></li>
+<li><p><strong>to_excel</strong> (<em>bool</em>) – Whether the csv file should also be saved as an excel file. Defaults to True (creating the
+Excel file)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="stitch_MAPS_annotations.Stitcher.local_contrast_enhancement">
+<em class="property">static </em><code class="descname">local_contrast_enhancement</code><span class="sig-paren">(</span><em>img_path</em>, <em>output_path</em>, <em>logger=None</em>, <em>save_img: bool = False</em>, <em>eight_bit: bool = True</em>, <em>use_norm_local_contrast: bool = False</em>, <em>use_CLAHE: bool = False</em>, <em>return_java_img: bool = False</em>, <em>return_numpy_img: bool = False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.local_contrast_enhancement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads an image and performs local contrast enhancement</p>
+<p>Loads the specified image, performs either NormalizeLocalContrast (default), CLAHE or no local contrast
+enhancement (in that order, thus performs NormalizeLocalContrast if both it and CLAHE are True).
+Optionally converts the image to 8bit and saves it. The parameters for NormalizeLocalContrast and
+CLAHE have default values that can be overwritten using the <a href="#id1"><span class="problematic" id="id2">**</span></a>kwargs by providing an argument with the specific
+name of the parameter to be changed</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>img_path</strong> (<em>Path</em><em> or </em><em>str</em>) – Full path to the image to be processed</p></li>
+<li><p><strong>output_path</strong> (<em>Path</em><em> or </em><em>str</em>) – Full path to where the output image should be saved (if save_img is True)</p></li>
+<li><p><strong>logger</strong> (<em>Logging</em>) – Logging object that is configured for the logging either in multiprocessing or normal
+processing. Defaults to None, thus loading the logger</p></li>
+<li><p><strong>save_img</strong> (<em>bool</em>) – Whether the processed image should be saved. Defaults to False (not saving the image)</p></li>
+<li><p><strong>eight_bit</strong> (<em>bool</em>) – Whether the image should be converted to 8 bit . Defaults to True (converting to 8 bit)</p></li>
+<li><p><strong>use_norm_local_contrast</strong> (<em>bool</em>) – Whether NormalizeLocalContrast Fiji Plugin should be run on the image.
+Defaults to False (not running NormalizeLocalContrast on the image)</p></li>
+<li><p><strong>use_CLAHE</strong> (<em>bool</em>) – Whether CLAHE Fiji Plugin should be run on the image. Defaults to False (not running
+CLAHE on the image)</p></li>
+<li><p><strong>return_java_img</strong> (<em>bool</em>) – Whether the function should return the java image. Defaults to False (not returning
+the image)</p></li>
+<li><p><strong>return_numpy_img</strong> (<em>bool</em>) – Whether the function should return a numpy version of the image. Defaults to False
+(not returning the image)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The processed image as an ImageJ1 ImagePlus image (if return_image is True)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>ImagePlus</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="stitch_MAPS_annotations.Stitcher.manage_batches">
-<code class="descname">manage_batches</code><span class="sig-paren">(</span><em>stitch_threshold: int = 1000</em>, <em>eight_bit: bool = True</em>, <em>max_processes: int = 4</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.manage_batches" title="Permalink to this definition">¶</a></dt>
+<code class="descname">manage_batches</code><span class="sig-paren">(</span><em>stitch_threshold: int = 1000</em>, <em>eight_bit: bool = True</em>, <em>show_arrow: bool = True</em>, <em>max_processes: int = 4</em>, <em>enhance_contrast: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.manage_batches" title="Permalink to this definition">¶</a></dt>
 <dd><p>Manages the parallelization of the stitching of batches</p>
 <p>As multiprocessing can make some issues, if max_processes is set to 1, it does not use multiprocessing calls.</p>
 <dl class="field-list simple">
@@ -504,9 +585,41 @@ csv file. Defaults to False (not deleting the batch csv files)</p>
 threshold, the stitching is not performed</p></li>
 <li><p><strong>eight_bit</strong> (<em>bool</em>) – Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
 images as 8bit</p></li>
+<li><p><strong>show_arrow</strong> (<em>bool</em>) – Whether an arrow should be added to the image overlay that points to the annotation in
+the stitched image. Defaults to True, thus adding an arrow to the overlay</p></li>
 <li><p><strong>max_processes</strong> (<em>int</em>) – The number of parallel processes that should be used to process the batches.
 Be careful, each batch needs a lot of memory</p></li>
+<li><p><strong>enhance_contrast</strong> (<em>bool</em>) – Whether contrast enhancement should be performed on the images before stitching.
+Defaults to True (thus enhancing contrast in the images)</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="stitch_MAPS_annotations.Stitcher.parse_create_classifier_csv_batches">
+<code class="descname">parse_create_classifier_csv_batches</code><span class="sig-paren">(</span><em>batch_size: int</em>, <em>classifier_csv_path: str</em>, <em>highmag_layer: str = 'highmag'</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.parse_create_classifier_csv_batches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the batch csv files of annotation_tiles based on classifier output</p>
+<p>Calls the MapsXmlParser to parse the XML file of the acquisition and save the annotation_tiles as a csv in
+batches</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>batch_size</strong> (<em>int</em>) – Batch size of the csv files</p></li>
+<li><p><strong>classifier_csv_path</strong> (<em>str</em>) – Path to the classifier output csv file</p></li>
+<li><p><strong>highmag_layer</strong> (<em>str</em>) – Name of the image layer in MAPS for which tiles containing annotations should
+be found. Defaults to ‘highmag’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>First value: The annotation_tiles dictionary. Second value: A list of the filenames of the csv files</dt><dd><p>that were created</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
 </dd>
 </dl>
 </dd></dl>
@@ -520,7 +633,7 @@ batches</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>batch_size</strong> (<em>int</em>) – Description of arg2</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em>) – Batch size of the csv files</p></li>
 <li><p><strong>highmag_layer</strong> (<em>str</em>) – Name of the image layer in MAPS for which tiles containing annotations should
 be found. Defaults to ‘highmag’</p></li>
 </ul>
@@ -540,7 +653,7 @@ be found. Defaults to ‘highmag’</p></li>
 
 <dl class="staticmethod">
 <dt id="stitch_MAPS_annotations.Stitcher.process_stitching_params">
-<em class="property">static </em><code class="descname">process_stitching_params</code><span class="sig-paren">(</span><em>stitch_params</em>, <em>annotation_coordinates</em>, <em>stitch_threshold</em>, <em>original_positions</em>, <em>center_index: int</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.process_stitching_params" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="descname">process_stitching_params</code><span class="sig-paren">(</span><em>stitch_params</em>, <em>annotation_coordinates</em>, <em>stitch_threshold</em>, <em>original_positions</em>, <em>center_index: int</em>, <em>logger</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.process_stitching_params" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates the position of the annotation in the stitched image and decides if stitching worked well</p>
 <p>Based on the stitch_threshold, this function decides whether the stitching has worked well. If any image was
 moved by more than the threshold, it returns False.</p>
@@ -554,6 +667,8 @@ moved by more than the threshold, it returns False.</p>
 calculate the shift by stitching</p></li>
 <li><p><strong>center_index</strong> (<em>int</em>) – Index of which tile in the stitched image was the original center. Used to calculate
 the position of the annotation in the stitched image</p></li>
+<li><p><strong>logger</strong> (<em>Logging</em>) – Logging object that is configured for the logging either in multiprocessing or normal
+processing</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -571,7 +686,7 @@ the position of the annotation in the stitched image</p></li>
 
 <dl class="method">
 <dt id="stitch_MAPS_annotations.Stitcher.stitch_annotated_tiles">
-<code class="descname">stitch_annotated_tiles</code><span class="sig-paren">(</span><em>annotation_tiles: dict</em>, <em>stitch_threshold: int = 1000</em>, <em>eight_bit: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.stitch_annotated_tiles" title="Permalink to this definition">¶</a></dt>
+<code class="descname">stitch_annotated_tiles</code><span class="sig-paren">(</span><em>annotation_tiles: dict</em>, <em>logger</em>, <em>stitch_threshold: int = 1000</em>, <em>eight_bit: bool = True</em>, <em>show_arrow: bool = True</em>, <em>enhance_contrast: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.stitch_annotated_tiles" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stitches 3x3 images for all annotations in annotation_tiles</p>
 <p>Goes through all annotations in annotation_tiles dict, load the center file and the existing surrounding files.
 Sets up the stitching configuration according to the neighboring tiles and calculates the stitching parameters.
@@ -587,10 +702,16 @@ Can deal with 3x3, 3x2, 2x3 and 2x2 squares with 10% overlap.</p>
 details. Needs to contain img_path, pixel_size, Annotation_tile_img_position_x,
 Annotation_tile_img_position_y, surrounding_tile_names &amp; surrounding_tile_exists for this function
 to work</p></li>
+<li><p><strong>logger</strong> (<em>Logging</em>) – Logging object that is configured for the logging either in multiprocessing or normal
+processing</p></li>
 <li><p><strong>stitch_threshold</strong> (<em>int</em>) – Threshold to judge stitching quality by. If images would be moved more than this
 threshold, the stitching is not performed</p></li>
 <li><p><strong>eight_bit</strong> (<em>bool</em>) – Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
 images as 8bit</p></li>
+<li><p><strong>show_arrow</strong> (<em>bool</em>) – Whether an arrow should be added to the image overlay that points to the annotation in
+the stitched image. Defaults to True, thus adding an arrow to the overlay</p></li>
+<li><p><strong>enhance_contrast</strong> (<em>bool</em>) – Whether contrast enhancement should be performed on the images before stitching.
+Defaults to True (thus enhancing contrast in the images)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -604,7 +725,7 @@ images as 8bit</p></li>
 
 <dl class="method">
 <dt id="stitch_MAPS_annotations.Stitcher.stitch_batch">
-<code class="descname">stitch_batch</code><span class="sig-paren">(</span><em>annotation_csv_path</em>, <em>stitch_threshold: int = 1000</em>, <em>eight_bit: bool = True</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.stitch_batch" title="Permalink to this definition">¶</a></dt>
+<code class="descname">stitch_batch</code><span class="sig-paren">(</span><em>annotation_csv_path</em>, <em>stitch_threshold: int = 1000</em>, <em>eight_bit: bool = True</em>, <em>show_arrow: bool = True</em>, <em>enhance_contrast: bool = True</em>, <em>multiprocessing_logger: bool = False</em><span class="sig-paren">)</span><a class="headerlink" href="#stitch_MAPS_annotations.Stitcher.stitch_batch" title="Permalink to this definition">¶</a></dt>
 <dd><p>Submits the stitching of a batch, the writing of an updated csv file and the deletion of the old csv file</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -614,6 +735,12 @@ images as 8bit</p></li>
 threshold, the stitching is not performed</p></li>
 <li><p><strong>eight_bit</strong> (<em>bool</em>) – Whether the stitched image should be saved as an 8bit image. Defaults to True, thus saving
 images as 8bit</p></li>
+<li><p><strong>show_arrow</strong> (<em>bool</em>) – Whether an arrow should be added to the image overlay that points to the annotation in
+the stitched image. Defaults to True, thus adding an arrow to the overlay</p></li>
+<li><p><strong>enhance_contrast</strong> (<em>bool</em>) – Whether contrast enhancement should be performed on the images before stitching.
+Defaults to True (thus enhancing contrast in the images)</p></li>
+<li><p><strong>multiprocessing_logger</strong> (<em>bool</em>) – Whether a multiprocessing logger or a normal logger should be used. Defaults
+to False, thus using a normal logger</p></li>
 </ul>
 </dd>
 </dl>

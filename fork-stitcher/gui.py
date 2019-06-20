@@ -257,8 +257,15 @@ class Gui:
 
     @staticmethod
     def dummy(iterations):
+        """Dummy run function to test the interface, e.g. locally on my Mac
+
+        Function just does some logging so that the interface can be tested.
+
+        Args:
+            iterations (int): Number of log messages to be produced
+
+        """
         logger = logging.getLogger(__name__)
-        # while True:
         for i in range(iterations):
             logger.info('Running Dummy')
             time.sleep(1)
