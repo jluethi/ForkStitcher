@@ -65,7 +65,8 @@ Building a standalone application for stitcher
 ----------
 You need to install all dependencies for the Stitcher as described above. I recommend testing whether everything is working by using the Quick run instructions afterwards.
 
-For Windows: 
+**For Windows:**
+
 Edit the Stitcher.spec file:
 - change pathex to your local path of the git directory
 - datas needs to contain 3 paths. Change the source (the first of the two entries) to where those are on your local system and leave the target.
@@ -89,7 +90,8 @@ pyinstaller Stitcher.spec
 **IMPORTANT**: Go into the dist\Stitcher folder. Manually delete the jvm.dll file. Then, you have a working Stitcher.exe in the dist\Stitcher folder. Just don't move the .exe file out of the folder (Shortcuts are fine though).
 
 
-On Mac:
+**For Mac:**
+
 The User Interface does not work on Mac because of an issue with pyimage and tkinter. See here for details and ideas on how to work around it: https://github.com/imagej/pyimagej/issues/39
 ```
 pyinstaller -p fork-stitcher --add-data '/miniconda3/envs/fork_stitcher/share/pyjnius/pyjnius.jar:./share/pyjnius/' fork-stitcher/run_stitching_batches.py
