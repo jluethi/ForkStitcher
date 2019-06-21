@@ -529,18 +529,20 @@ class Stitcher:
         for name in items:
             if regex.search(name):
                 annotation_csv_list.append(self.csv_base_path / name)
-        if max_processes > 1:
-            with multiprocessing.Pool(processes=max_processes) as pool:
-                for annotation_csv_path in annotation_csv_list:
-                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit,
-                                                              show_arrow, enhance_contrast, True, ))
-
-                pool.close()
-                pool.join()
-        else:
+        # There is an issue with an ImageJ library that only occurs in non-multiprocessing.
+        # Therefore, always use multiprocessing, even for 1 process.
+        # if max_processes > 1:
+        with multiprocessing.Pool(processes=max_processes) as pool:
             for annotation_csv_path in annotation_csv_list:
-                self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit, show_arrow,
-                                  enhance_contrast, False)
+                pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit,
+                                                          show_arrow, enhance_contrast, True, ))
+
+            pool.close()
+            pool.join()
+        # else:
+        #     for annotation_csv_path in annotation_csv_list:
+        #         self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit, show_arrow,
+        #                           enhance_contrast, False)
 
     def combine_csvs(self, delete_batches: bool = False, to_excel: bool = True):
         """Combines batch csv output files into the final csv file and optionally an excel file
