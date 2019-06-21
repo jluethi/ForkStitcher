@@ -806,10 +806,9 @@ class MapsXmlParser:
                     # the tile of interest and the classifier output already provides that, it's not done here
                     self.annotation_tiles[annotation_name]['Annotation_StagePosition_x'] = None
                     self.annotation_tiles[annotation_name]['Annotation_StagePosition_y'] = None
-                    # x & y were inverted in the classifier => revert them back
-                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_x'] = annotation[1] \
+                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_x'] = annotation[0] \
                                                                                                + annotation_shift
-                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_y'] = annotation[0] \
+                    self.annotation_tiles[annotation_name]['Annotation_tile_img_position_y'] = annotation[1] \
                                                                                                + annotation_shift
         self.determine_surrounding_tiles()
         return self.annotation_tiles
