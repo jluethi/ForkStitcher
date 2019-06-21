@@ -102,7 +102,7 @@ class Gui:
         edit_menu.add_command(label='Reset to default', command=self.reset_parameters)
 
         # ***** User Inputs *****
-        file_picker_label = tk.Label(master, text='Project Folder:')
+        file_picker_label = tk.Label(master, text='Project folder:')
         self.project_path = tk.StringVar()
         self.file_picker_entry = tk.Entry(master, textvariable=self.project_path, width=30)
         file_picker_button = tk.Button(master, text='Choose Directory', command=self.ask_for_path)
@@ -115,10 +115,10 @@ class Gui:
         tk.Checkbutton(master, text='Load input from classifier', variable=self.classifier_input,
                        command=self.display_csv_picker).grid(row=1, column=1, pady=(6, 0), sticky=tk.W)
 
-        self.csv_picker_label = tk.Label(master, text='Classifier CSV File:')
+        self.csv_picker_label = tk.Label(master, text='Classifier CSV file:')
         self.csv_path = tk.StringVar()
         self.csv_picker_entry = tk.Entry(master, textvariable=self.csv_path, width=30)
-        self.csv_picker_button = tk.Button(master, text='Choose CSV File', command=self.ask_for_file)
+        self.csv_picker_button = tk.Button(master, text='Choose CSV file', command=self.ask_for_file)
 
         grid_pos = 4
         tk.Label(master, text='Advanced Options', font=(self.font, 14, 'bold')).grid(row=grid_pos, column=1,
@@ -126,11 +126,11 @@ class Gui:
 
         # TODO: Find out how to hide advanced options by default
         self.output_folder = tk.StringVar()
-        tk.Label(master, text='Output Folder Name Images:').grid(row=grid_pos + 1, column=0, sticky=tk.E)
+        tk.Label(master, text='Output folder name images:').grid(row=grid_pos + 1, column=0, sticky=tk.E)
         tk.Entry(master, textvariable=self.output_folder).grid(row=grid_pos + 1, column=1, sticky=tk.W)
 
         self.csv_folder_name = tk.StringVar()
-        tk.Label(master, text='Output Folder Name csvs:').grid(row=grid_pos + 2, column=0, sticky=tk.E)
+        tk.Label(master, text='Output folder name CSVs:').grid(row=grid_pos + 2, column=0, sticky=tk.E)
         tk.Entry(master, textvariable=self.csv_folder_name).grid(row=grid_pos + 2, column=1, sticky=tk.W)
 
         self.max_processes = tk.IntVar()
@@ -142,11 +142,11 @@ class Gui:
         tk.Entry(master, textvariable=self.batch_size).grid(row=grid_pos + 4, column=1, sticky=tk.W)
 
         self.highmag_layer = tk.StringVar()
-        tk.Label(master, text='High Magnification Layer:').grid(row=grid_pos + 5, column=0, sticky=tk.E)
+        tk.Label(master, text='High magnification layer:').grid(row=grid_pos + 5, column=0, sticky=tk.E)
         tk.Entry(master, textvariable=self.highmag_layer).grid(row=grid_pos + 5, column=1, sticky=tk.W)
 
         self.stitch_threshold = tk.IntVar()
-        tk.Label(master, text='Stitch Threshold:').grid(row=grid_pos + 6, column=0, sticky=tk.E)
+        tk.Label(master, text='Stitch threshold:').grid(row=grid_pos + 6, column=0, sticky=tk.E)
         tk.Entry(master, textvariable=self.stitch_threshold).grid(row=grid_pos + 6, column=1, sticky=tk.W)
 
         self.eight_bit = tk.BooleanVar()
@@ -161,7 +161,7 @@ class Gui:
             grid(row=grid_pos + 9, column=1, sticky=tk.W)
 
         self.continue_processing = tk.BooleanVar()
-        tk.Checkbutton(master, text='Continue Processing an Experiment', variable=self.continue_processing).\
+        tk.Checkbutton(master, text='Continue processing an experiment', variable=self.continue_processing).\
             grid(row=grid_pos + 10, column=1, sticky=tk.W)
 
         # Run button
