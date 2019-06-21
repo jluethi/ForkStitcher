@@ -107,7 +107,7 @@ class Gui:
         self.file_picker_entry = tk.Entry(master, textvariable=self.project_path, width=30)
         file_picker_button = tk.Button(master, text='Choose Directory', command=self.ask_for_path)
 
-        file_picker_label.grid(row=0, column=0, sticky=tk.E, pady=(10, 0))
+        file_picker_label.grid(row=0, column=0, sticky=tk.E, pady=(10, 0), padx=5)
         self.file_picker_entry.grid(row=0, column=1, sticky=tk.W, pady=(10, 0))
         file_picker_button.grid(row=0, column=2, sticky=tk.W, pady=(10, 0))
 
@@ -126,27 +126,27 @@ class Gui:
 
         # TODO: Find out how to hide advanced options by default
         self.output_folder = tk.StringVar()
-        tk.Label(master, text='Output folder name images:').grid(row=grid_pos + 1, column=0, sticky=tk.E)
+        tk.Label(master, text='Output folder name images:').grid(row=grid_pos + 1, column=0, sticky=tk.E, padx=5)
         tk.Entry(master, textvariable=self.output_folder).grid(row=grid_pos + 1, column=1, sticky=tk.W)
 
         self.csv_folder_name = tk.StringVar()
-        tk.Label(master, text='Output folder name CSVs:').grid(row=grid_pos + 2, column=0, sticky=tk.E)
+        tk.Label(master, text='Output folder name CSVs:').grid(row=grid_pos + 2, column=0, sticky=tk.E, padx=5)
         tk.Entry(master, textvariable=self.csv_folder_name).grid(row=grid_pos + 2, column=1, sticky=tk.W)
 
         self.max_processes = tk.IntVar()
-        tk.Label(master, text='Number of parallel processes:').grid(row=grid_pos + 3, column=0, sticky=tk.E)
+        tk.Label(master, text='Number of parallel processes:').grid(row=grid_pos + 3, column=0, sticky=tk.E, padx=5)
         tk.Entry(master, textvariable=self.max_processes).grid(row=grid_pos + 3, column=1, sticky=tk.W)
 
         self.batch_size = tk.IntVar()
-        tk.Label(master, text='Batch size:').grid(row=grid_pos + 4, column=0, sticky=tk.E)
+        tk.Label(master, text='Batch size:').grid(row=grid_pos + 4, column=0, sticky=tk.E, padx=5)
         tk.Entry(master, textvariable=self.batch_size).grid(row=grid_pos + 4, column=1, sticky=tk.W)
 
         self.highmag_layer = tk.StringVar()
-        tk.Label(master, text='High magnification layer:').grid(row=grid_pos + 5, column=0, sticky=tk.E)
+        tk.Label(master, text='MAPS high magnification layer:').grid(row=grid_pos + 5, column=0, sticky=tk.E, padx=5)
         tk.Entry(master, textvariable=self.highmag_layer).grid(row=grid_pos + 5, column=1, sticky=tk.W)
 
         self.stitch_threshold = tk.IntVar()
-        tk.Label(master, text='Stitch threshold:').grid(row=grid_pos + 6, column=0, sticky=tk.E)
+        tk.Label(master, text='Stitch threshold:').grid(row=grid_pos + 6, column=0, sticky=tk.E, padx=5)
         tk.Entry(master, textvariable=self.stitch_threshold).grid(row=grid_pos + 6, column=1, sticky=tk.W)
 
         self.eight_bit = tk.BooleanVar()
@@ -337,6 +337,7 @@ class Gui:
 
             if self.classifier_input.get():
                 params_set = params_set and len(self.csv_path.get()) > 0
+                params_set = params_set and self.csv_path.get().endswith('.csv')
 
         except _tkinter.TclError:
             params_set = False
