@@ -372,7 +372,7 @@ class Stitcher:
         image_plus_img = IJ.openImage(str(img_path))
 
         if use_norm_local_contrast:
-            logger.debug('Loading {} and performing NormalizeLocalContrast on it'.format(img_path))
+            logger.debug('Loading {} and performing NormalizeLocalContrast on it'.format(str(img_path)))
             NormLocalContrast = autoclass('mpicbg.ij.plugin.NormalizeLocalContrast')
             brx = kwargs.get('brx', 300)
             bry = kwargs.get('bry', 300)
@@ -383,7 +383,7 @@ class Stitcher:
             NormLocalContrast.run(image_plus_img.getChannelProcessor(), brx, bry, stds, center, stretch)
 
         elif use_CLAHE:
-            logger.debug('Loading {} and performing CLAHE on it'.format(img_path))
+            logger.debug('Loading {} and performing CLAHE on it'.format(str(img_path)))
             Flat = autoclass('mpicbg.ij.clahe.Flat')
             blockRadius = kwargs.get('blockRadius', 63)
             bins = kwargs.get('bins', 255)
@@ -394,7 +394,7 @@ class Stitcher:
             Flat.getFastInstance().run(image_plus_img, blockRadius, bins, slope, mask, composite)
 
         else:
-            logger.debug('Loading {}. Not performing any contrast enhancements'.format(img_path))
+            logger.debug('Loading {}. Not performing any contrast enhancements'.format(str(img_path)))
 
         if eight_bit:
             IJ.run(image_plus_img, "8-bit", "")
