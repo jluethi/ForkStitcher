@@ -81,7 +81,7 @@ Edit the Stitcher.spec file:
   ```
   2. Path to an openjdk 8. I recommend downloading the zip version for your system from here: https://adoptopenjdk.net/releases.html#x64_win
   
-  3. Path to maven. I recommend downloading the binary zip from here: https://maven.apache.org/download.cgi 
+  3. Path to maven. I recommend downloading the binary zip from here: https://maven.apache.org/download.cgi
   
 To create an executable:
 ```
@@ -90,7 +90,12 @@ cd path\to\ForkStitcher
 pyinstaller Stitcher.spec
 ```
 
-**IMPORTANT**: Go into the dist\Stitcher folder. Manually delete the jvm.dll file. Then, you have a working Stitcher.exe in the dist\Stitcher folder. Just don't move the .exe file out of the folder (Shortcuts are fine though).
+**Warnings:**
+
+Do not move the .exe file out of the folder, use a shortcut to it.
+
+If you manually install the Stitcher without the spec file, either include the line `a.binaries = a.binaries - TOC([('jvm.dll', None, None)])` that removes the jvm.dll file or manually remove it afterwards from the Stitcher folder. Otherwise you can run into issue with what Java is being used (not the bundled one) and can get the following error message: `Error occurred during initialization of VM Unable to load native library: Can't find dependent libraries`
+
 
 
 **For Mac:**
