@@ -8,6 +8,7 @@ import time
 import logging
 import threading
 import queue
+import tkinter.font as font
 
 from stitch_MAPS_annotations import Stitcher
 from sites_of_interest_parser import MapsXmlParser
@@ -87,6 +88,8 @@ class Gui:
         self.master = master
         frame = tk.Frame(master)
 
+        self.font = font.Font()
+
         # ***** Menu *****
         menu = tk.Menu(master)
         master.config(menu=menu)
@@ -99,71 +102,77 @@ class Gui:
         edit_menu.add_command(label='Reset to default', command=self.reset_parameters)
 
         # ***** User Inputs *****
-        file_picker_label = tk.Label(master, text='Project Folder')
+        file_picker_label = tk.Label(master, text='Project Folder:')
         self.project_path = tk.StringVar()
         self.file_picker_entry = tk.Entry(master, textvariable=self.project_path, width=30)
         file_picker_button = tk.Button(master, text='Choose Directory', command=self.ask_for_path)
 
-        file_picker_label.grid(row=0, column=0, sticky=tk.E)
-        self.file_picker_entry.grid(row=0, column=1, sticky=tk.W)
-        file_picker_button.grid(row=0, column=2, sticky=tk.W)
+        file_picker_label.grid(row=0, column=0, sticky=tk.E, pady=(10, 0))
+        self.file_picker_entry.grid(row=0, column=1, sticky=tk.W, pady=(10, 0))
+        file_picker_button.grid(row=0, column=2, sticky=tk.W, pady=(10, 0))
 
         self.classifier_input = tk.BooleanVar()
         tk.Checkbutton(master, text='Load input from classifier', variable=self.classifier_input,
-                       command=self.display_csv_picker).grid(row=1, column=1, sticky=tk.W)
+                       command=self.display_csv_picker).grid(row=1, column=1, pady=(6, 0), sticky=tk.W)
 
-        self.csv_picker_label = tk.Label(master, text='Classifier CSV File')
+        self.csv_picker_label = tk.Label(master, text='Classifier CSV File:')
         self.csv_path = tk.StringVar()
         self.csv_picker_entry = tk.Entry(master, textvariable=self.csv_path, width=30)
         self.csv_picker_button = tk.Button(master, text='Choose CSV File', command=self.ask_for_file)
 
-        # TODO: Add label: Advanced options in bold
+        grid_pos = 4
+        tk.Label(master, text='Advanced Options', font=(self.font, 14, 'bold')).grid(row=grid_pos, column=1,
+                                                                                     pady=(20, 0), sticky=tk.W)
 
-        # TODO: Find out how to hide some options by default
-        # Advanced options in a dropdown
-        self.max_processes = tk.IntVar()
-        tk.Label(master, text='Number of parallel processes').grid(row=3, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.max_processes).grid(row=3, column=1, sticky=tk.W)
-
-        self.batch_size = tk.IntVar()
-        tk.Label(master, text='Batch size').grid(row=4, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.batch_size).grid(row=4, column=1, sticky=tk.W)
+        # TODO: Find out how to hide advanced options by default
+        self.output_folder = tk.StringVar()
+        tk.Label(master, text='Output Folder Name Images:').grid(row=grid_pos + 1, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.output_folder).grid(row=grid_pos + 1, column=1, sticky=tk.W)
 
         self.csv_folder_name = tk.StringVar()
-        tk.Label(master, text='CSV folder name').grid(row=5, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.csv_folder_name).grid(row=5, column=1, sticky=tk.W)
+        tk.Label(master, text='Output Folder Name csvs:').grid(row=grid_pos + 2, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.csv_folder_name).grid(row=grid_pos + 2, column=1, sticky=tk.W)
 
-        self.output_folder = tk.StringVar()
-        tk.Label(master, text='Stitched images folder name').grid(row=6, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.output_folder).grid(row=6, column=1, sticky=tk.W)
+        self.max_processes = tk.IntVar()
+        tk.Label(master, text='Number of parallel processes:').grid(row=grid_pos + 3, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.max_processes).grid(row=grid_pos + 3, column=1, sticky=tk.W)
+
+        self.batch_size = tk.IntVar()
+        tk.Label(master, text='Batch size:').grid(row=grid_pos + 4, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.batch_size).grid(row=grid_pos + 4, column=1, sticky=tk.W)
 
         self.highmag_layer = tk.StringVar()
-        tk.Label(master, text='High magnification layer').grid(row=7, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.highmag_layer).grid(row=7, column=1, sticky=tk.W)
+        tk.Label(master, text='High Magnification Layer:').grid(row=grid_pos + 5, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.highmag_layer).grid(row=grid_pos + 5, column=1, sticky=tk.W)
 
         self.stitch_threshold = tk.IntVar()
-        tk.Label(master, text='Stitch Threshold').grid(row=8, column=0, sticky=tk.E)
-        tk.Entry(master, textvariable=self.stitch_threshold).grid(row=8, column=1, sticky=tk.W)
+        tk.Label(master, text='Stitch Threshold:').grid(row=grid_pos + 6, column=0, sticky=tk.E)
+        tk.Entry(master, textvariable=self.stitch_threshold).grid(row=grid_pos + 6, column=1, sticky=tk.W)
 
         self.eight_bit = tk.BooleanVar()
-        tk.Checkbutton(master, text='8 bit output', variable=self.eight_bit).grid(row=9, column=1, sticky=tk.W)
+        tk.Checkbutton(master, text='8 bit output', variable=self.eight_bit).grid(row=grid_pos + 7, column=1, sticky=tk.W)
 
         self.arrow_overlay = tk.BooleanVar()
         tk.Checkbutton(master, text='Add an arrow overlay that points to the fork', variable=self.arrow_overlay). \
-            grid(row=10, column=1, sticky=tk.W)
+            grid(row=grid_pos + 8, column=1, sticky=tk.W)
 
         self.contrast_enhance = tk.BooleanVar()
         tk.Checkbutton(master, text='Produce contrast enhanced images', variable=self.contrast_enhance). \
-            grid(row=11, column=1, sticky=tk.W)
+            grid(row=grid_pos + 9, column=1, sticky=tk.W)
 
         self.continue_processing = tk.BooleanVar()
         tk.Checkbutton(master, text='Continue Processing an Experiment', variable=self.continue_processing).\
-            grid(row=12, column=1, sticky=tk.W)
-
+            grid(row=grid_pos + 10, column=1, sticky=tk.W)
 
         # Run button
-        self.run_button = tk.Button(master, text='Run', fg='red', command=self.run, width=20)
-        self.run_button.grid(row=13, column=2, sticky=tk.W)
+        self.run_button_text = tk.StringVar()
+        self.run_button = tk.Button(master, textvariable=self.run_button_text, width=10)
+        self.run_button_ready()
+        self.run_button.grid(row=15, column=2, sticky=tk.W, pady=10, padx=10)
+
+        # Reset button
+        self.reset_button = tk.Button(master, text='Reset Parameters', width=20, command=self.reset_parameters)
+        self.reset_button.grid(row=15, column=0, sticky=tk.E, pady=10, padx=10)
 
         # Stop button (available during run)
         self.reset_parameters()
@@ -173,8 +182,8 @@ class Gui:
         self.max_processes.set(5)
         self.eight_bit.set(True)
         self.batch_size.set(5)
-        self.output_folder.set('stitchedForks_test')
-        self.csv_folder_name.set('annotation_csv_tests')
+        self.output_folder.set('stitchedForks')
+        self.csv_folder_name.set('annotations')
         self.highmag_layer.set('highmag')
         self.stitch_threshold.set(1000)
         self.arrow_overlay.set(True)
@@ -191,11 +200,12 @@ class Gui:
         params_set = self.check_all_parameters_set()
         if params_set and not self.continue_processing.get() and not self.classifier_input.get():
             self.create_logging_window()
+            self.run_button_to_running()
             log_file_path = str(Path(project_dir) / (project_name + '.log'))
             logger = MapsXmlParser.create_logger(log_file_path)
             logger.info('Process experiment {}'.format(project_name))
 
-            # thread = threading.Thread(target=self.dummy, args=(20, ))
+            # thread = threading.Thread(target=self.dummy, args=(10, ))
             # thread.daemon = True
             # thread.start()
             thread = threading.Thread(target=self.run_from_beginning, args=(base_path, project_name,))
@@ -204,6 +214,7 @@ class Gui:
 
         elif params_set and self.continue_processing.get():
             self.create_logging_window()
+            self.run_button_to_running()
             logging.info('Continuing to process experiment {}'.format(project_name))
             thread = threading.Thread(target=self.continue_run, args=(base_path, project_name,))
             thread.daemon = True
@@ -211,6 +222,7 @@ class Gui:
 
         elif params_set and self.classifier_input.get():
             self.create_logging_window()
+            self.run_button_to_running()
             logging.info('Load classifier output for experiment {} from the csv file: {}'.format(project_name,
                                                                                                  self.csv_path.get()))
             thread = threading.Thread(target=self.classifier_input_run, args=(base_path, project_name,
@@ -223,6 +235,14 @@ class Gui:
                                            message='You need to enter the correct kind of parameters in all the '
                                                    'required fields and then try again')
 
+    def run_button_to_running(self):
+        self.run_button_text.set('Running...')
+        self.run_button.config(height=2, fg='gray', command=self.nothing)
+
+    def run_button_ready(self):
+        self.run_button_text.set('Run')
+        self.run_button.config(height=2, fg='green', command=self.run, font=(self.font, 24, 'bold'))
+
     def run_from_beginning(self, base_path, project_name):
         # TODO: Catch issues when wrong path is provided or another error/warning occurs in the stitcher => catch my custom Exception, display it to the user
         stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
@@ -231,6 +251,7 @@ class Gui:
                                 max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
         stitcher.combine_csvs(delete_batches=True)
         logging.info('Finished processing the experiment')
+        self.run_button_ready()
 
 
     def continue_run(self, base_path, project_name):
@@ -239,6 +260,7 @@ class Gui:
                                 max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
         stitcher.combine_csvs(delete_batches=True)
         logging.info('Finished processing the experiment')
+        self.run_button_ready()
 
     def classifier_input_run(self, base_path, project_name, csv_path):
         stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
@@ -248,15 +270,16 @@ class Gui:
                                 max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
         stitcher.combine_csvs(delete_batches=True)
         logging.info('Finished processing the experiment')
+        self.run_button_ready()
 
     def create_logging_window(self):
+        # TODO: Check if the window already exists. Only make a new window if it doesn't exist yet
         log_window = tk.Toplevel(self.master)
         log_window.title('Log')
         LoggingWindow(log_window)
         # scrolled_text_box = LoggingWindow(log_window)
 
-    @staticmethod
-    def dummy(iterations):
+    def dummy(self, iterations):
         """Dummy run function to test the interface, e.g. locally on my Mac
 
         Function just does some logging so that the interface can be tested.
@@ -273,6 +296,15 @@ class Gui:
         for i in range(iterations):
             logger.info('Running Dummy 2! =D')
             time.sleep(1)
+
+        self.run_button_ready()
+
+    @staticmethod
+    def nothing():
+        """If the run button has already been pressed, just do nothing on future presses until the function finishes
+
+        """
+        pass
 
     def ask_for_path(self):
         path = tkinter.filedialog.askdirectory(title='Select folder containing the MapsProject.xml file')
