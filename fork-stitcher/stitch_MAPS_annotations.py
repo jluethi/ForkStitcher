@@ -411,7 +411,7 @@ class Stitcher:
             image_plus_img.close()
             return
 
-    def parse_create_csv_batches(self, batch_size: int, highmag_layer: str = 'highmag'):
+    def parse_create_csv_batches(self, batch_size: int, logging_queue, highmag_layer: str = 'highmag'):
         """Creates the batch csv files of annotation_tiles
 
         Calls the MapsXmlParser to parse the XML file of the acquisition and save the annotation_tiles as a csv in
@@ -431,7 +431,7 @@ class Stitcher:
         os.makedirs(str(self.csv_base_path), exist_ok=True)
         csv_path = self.csv_base_path / (self.project_name + '_annotations' + '.csv')
 
-        parser = sip.MapsXmlParser(project_folder=self.project_folder_path, use_unregistered_pos=True,
+        parser = sip.MapsXmlParser(project_folder=self.project_folder_path, logging_queue=logging_queue, use_unregistered_pos=True,
                                    name_of_highmag_layer=highmag_layer, stitch_radius=self.stitch_radius)
 
         annotation_tiles = parser.parse_xml()
@@ -440,7 +440,7 @@ class Stitcher:
 
         return [annotation_tiles, annotation_csvs]
 
-    def parse_create_classifier_csv_batches(self, batch_size: int, classifier_csv_path: str,
+    def parse_create_classifier_csv_batches(self, batch_size: int, classifier_csv_path: str, logging_queue,
                                             highmag_layer: str = 'highmag'):
         """Creates the batch csv files of annotation_tiles based on classifier output
 
@@ -462,8 +462,9 @@ class Stitcher:
         os.makedirs(str(self.csv_base_path), exist_ok=True)
         csv_path = self.csv_base_path / (self.project_name + '_annotations' + '.csv')
 
-        parser = sip.MapsXmlParser(project_folder=self.project_folder_path, use_unregistered_pos=True,
-                                   name_of_highmag_layer=highmag_layer, stitch_radius=self.stitch_radius)
+        parser = sip.MapsXmlParser(project_folder=self.project_folder_path, logging_queue=logging_queue,
+                                   use_unregistered_pos=True, name_of_highmag_layer=highmag_layer,
+                                   stitch_radius=self.stitch_radius)
 
         annotation_tiles = parser.parse_classifier_output(classifier_csv_path)
         annotation_csvs = sip.MapsXmlParser.save_annotation_tiles_to_csv(annotation_tiles, self.base_header, csv_path,
@@ -471,7 +472,7 @@ class Stitcher:
 
         return [annotation_tiles, annotation_csvs]
 
-    def stitch_batch(self, annotation_csv_path, stitch_threshold: int = 1000, eight_bit: bool = True,
+    def stitch_batch(self, annotation_csv_path, logging_queue, stitch_threshold: int = 1000, eight_bit: bool = True,
                      show_arrow: bool = True, enhance_contrast: bool = True, multiprocessing_logger: bool = False):
         """Submits the stitching of a batch, the writing of an updated csv file and the deletion of the old csv file
 
@@ -493,7 +494,7 @@ class Stitcher:
         os.makedirs(str(self.output_path), exist_ok=True)
         annotation_tiles_loaded = sip.MapsXmlParser.load_annotations_from_csv(self.base_header, annotation_csv_path)
 
-        logger = sip.MapsXmlParser.create_logger(self.log_file_path, multiprocessing_logger)
+        logger = sip.MapsXmlParser.create_logger(self.log_file_path, logging_queue, multiprocessing_logger)
         stitched_annotation_tiles = self.stitch_annotated_tiles(annotation_tiles=annotation_tiles_loaded, logger=logger,
                                                                 stitch_threshold=stitch_threshold,
                                                                 eight_bit=eight_bit, show_arrow=show_arrow,
@@ -503,7 +504,7 @@ class Stitcher:
         sip.MapsXmlParser.save_annotation_tiles_to_csv(stitched_annotation_tiles, self.base_header, csv_stitched_path)
         os.remove(str(annotation_csv_path))
 
-    def manage_batches(self, stitch_threshold: int = 1000, eight_bit: bool = True, show_arrow: bool = True,
+    def manage_batches(self, logging_queue, stitch_threshold: int = 1000, eight_bit: bool = True, show_arrow: bool = True,
                        max_processes: int = 4, enhance_contrast: bool = True):
         """Manages the parallelization of the stitching of batches
 
@@ -532,17 +533,17 @@ class Stitcher:
         if max_processes > 1:
             with multiprocessing.Pool(processes=max_processes) as pool:
                 for annotation_csv_path in annotation_csv_list:
-                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, stitch_threshold, eight_bit,
+                    pool.apply_async(self.stitch_batch, args=(annotation_csv_path, logging_queue, stitch_threshold, eight_bit,
                                                               show_arrow, enhance_contrast, True, ))
 
                 pool.close()
                 pool.join()
         else:
             for annotation_csv_path in annotation_csv_list:
-                self.stitch_batch(annotation_csv_path, stitch_threshold, eight_bit, show_arrow,
+                self.stitch_batch(annotation_csv_path, logging_queue, stitch_threshold, eight_bit, show_arrow,
                                   enhance_contrast, False)
 
-    def combine_csvs(self, delete_batches: bool = False, to_excel: bool = True):
+    def combine_csvs(self, logging_queue, delete_batches: bool = False, to_excel: bool = True):
         """Combines batch csv output files into the final csv file and optionally an excel file
 
         Args:
@@ -552,7 +553,7 @@ class Stitcher:
                 Excel file)
 
         """
-        logger = sip.MapsXmlParser.create_logger(self.log_file_path)
+        logger = sip.MapsXmlParser.create_logger(self.log_file_path, logging_queue)
 
         items = os.listdir(self.csv_base_path)
         stitched_csvs = []

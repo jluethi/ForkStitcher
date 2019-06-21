@@ -9,6 +9,7 @@ import pandas as pd
 import math
 from pathlib import Path
 import logging
+import logging.handlers
 import copy
 import multiprocessing
 import unicodedata
@@ -78,7 +79,7 @@ class MapsXmlParser:
 
     """
 
-    def __init__(self, project_folder: str, name_of_highmag_layer: str = 'highmag', use_unregistered_pos: bool = True,
+    def __init__(self, project_folder: str, logging_queue, name_of_highmag_layer: str = 'highmag', use_unregistered_pos: bool = True,
                  stitch_radius: int = 1):
         self.project_folder_path = Path(project_folder)
         self.layers = {}
@@ -87,6 +88,7 @@ class MapsXmlParser:
         self.annotation_tiles = {}
         self.stitch_radius = stitch_radius
         self.pixel_size = 0.0
+        self.logging_queue = logging_queue
 
         # Usage of width and height may be switched, as Talos images are always square and
         # I couldn't test non-square images
@@ -188,7 +190,7 @@ class MapsXmlParser:
         return path
 
     @staticmethod
-    def create_logger(log_file_path, multiprocessing_logger: bool = False):
+    def create_logger(log_file_path, logging_queue = None, multiprocessing_logger: bool = False):
         """ Returns a logger and creates it if it doesn't yet exist
 
         Gets the correct logger for normal or multiprocessing. If it already exists, just returns this logger. If it
@@ -225,6 +227,13 @@ class MapsXmlParser:
             ch = logging.StreamHandler()
             ch.setLevel(logging.INFO)
             logger.addHandler(ch)
+
+            # Add a handler that adds everything to a queue that can be read from the interface
+            if logging_queue is not None:
+                h = logging.handlers.QueueHandler(logging_queue)
+                h.setLevel(logging.INFO)
+                h.setFormatter(formatter)
+                logger.addHandler(h)
 
         return logger
 
@@ -273,7 +282,7 @@ class MapsXmlParser:
 
         """
         log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
-        logger = self.create_logger(log_file_path)
+        logger = self.create_logger(log_file_path, self.logging_queue)
         for ggc in layer_group:
             # Get the path to the metadata xml files for all the highmag layers,
             # the pixel size and the StagePosition of the layers
@@ -558,7 +567,7 @@ class MapsXmlParser:
         # If the distance is larger than the diagonal distance to the edge, the annotation is not inside of any tile
         # and thus shouldn't be exported
         log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
-        logger = self.create_logger(log_file_path)
+        logger = self.create_logger(log_file_path, self.logging_queue)
         distance_threshold = np.square(self.img_height / 2 * self.pixel_size) \
                              + np.square(self.img_width / 2 * self.pixel_size)
 
@@ -839,7 +848,7 @@ class MapsXmlParser:
 
         if output_name != name:
             log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
-            logger = self.create_logger(log_file_path)
+            logger = self.create_logger(log_file_path, self.logging_queue)
             logger.warning('{} is not a valid filename, because it cannot be made into a filename. It has been changed '
                            'to {}'.format(name, output_name))
         return output_name

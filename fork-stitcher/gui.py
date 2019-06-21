@@ -34,7 +34,7 @@ class QueueHandler(logging.Handler):
 
 class LoggingWindow:
     # Based on: https://github.com/beenje/tkinter-logging-text-widget
-    def __init__(self, master):
+    def __init__(self, master, logging_queue):
         self.master = master
         self.scrolled_text = ScrolledText(master=master, state='disabled', height=15)
         self.scrolled_text.grid(row=0, column=0)
@@ -47,7 +47,7 @@ class LoggingWindow:
         # Get the logger
         self.logger = logging.getLogger()
 
-        self.log_queue = queue.Queue()
+        self.log_queue = logging_queue
         self.queue_handler = QueueHandler(self.log_queue)
         formatter = logging.Formatter('%(asctime)s : %(levelname)s : %(message)s')
         self.queue_handler.setFormatter(formatter)
@@ -83,10 +83,11 @@ class LoggingWindow:
 
 class Gui:
 
-    def __init__(self, master):
+    def __init__(self, master, logging_queue):
 
         self.master = master
         frame = tk.Frame(master)
+        self.logging_queue = logging_queue
 
         self.font = font.Font()
 
@@ -202,7 +203,7 @@ class Gui:
             self.create_logging_window()
             self.run_button_to_running()
             log_file_path = str(Path(project_dir) / (project_name + '.log'))
-            logger = MapsXmlParser.create_logger(log_file_path)
+            logger = MapsXmlParser.create_logger(log_file_path, self.logging_queue)
             logger.info('Process experiment {}'.format(project_name))
 
             # thread = threading.Thread(target=self.dummy, args=(10, ))
@@ -246,29 +247,29 @@ class Gui:
     def run_from_beginning(self, base_path, project_name):
         # TODO: Catch issues when wrong path is provided or another error/warning occurs in the stitcher => catch my custom Exception, display it to the user
         stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
-        stitcher.parse_create_csv_batches(batch_size=self.batch_size.get(), highmag_layer=self.highmag_layer.get())
-        stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
+        stitcher.parse_create_csv_batches(batch_size=self.batch_size.get(), logging_queue=self.logging_queue, highmag_layer=self.highmag_layer.get())
+        stitcher.manage_batches(logging_queue=self.logging_queue, stitch_threshold=self.stitch_threshold.get(), eight_bit=self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
                                 max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
-        stitcher.combine_csvs(delete_batches=True)
+        stitcher.combine_csvs(delete_batches=True, logging_queue=self.logging_queue)
         logging.info('Finished processing the experiment')
         self.run_button_ready()
 
 
     def continue_run(self, base_path, project_name):
         stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
-        stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
+        stitcher.manage_batches(logging_queue=self.logging_queue, stitch_threshold=self.stitch_threshold.get(), eight_bit=self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
                                 max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
-        stitcher.combine_csvs(delete_batches=True)
+        stitcher.combine_csvs(delete_batches=True, logging_queue=self.logging_queue)
         logging.info('Finished processing the experiment')
         self.run_button_ready()
 
     def classifier_input_run(self, base_path, project_name, csv_path):
         stitcher = Stitcher(base_path, project_name, self.csv_folder_name.get(), self.output_folder.get())
-        stitcher.parse_create_classifier_csv_batches(batch_size=self.batch_size.get(), classifier_csv_path=csv_path,
+        stitcher.parse_create_classifier_csv_batches(batch_size=self.batch_size.get(), logging_queue=self.logging_queue, classifier_csv_path=csv_path,
                                                      highmag_layer=self.highmag_layer.get())
-        stitcher.manage_batches(self.stitch_threshold.get(), self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
+        stitcher.manage_batches(logging_queue=self.logging_queue, stitch_threshold=self.stitch_threshold.get(), eight_bit=self.eight_bit.get(), show_arrow=self.arrow_overlay.get(),
                                 max_processes=self.max_processes.get(), enhance_contrast=self.contrast_enhance.get())
-        stitcher.combine_csvs(delete_batches=True)
+        stitcher.combine_csvs(delete_batches=True, logging_queue=self.logging_queue)
         logging.info('Finished processing the experiment')
         self.run_button_ready()
 
@@ -276,7 +277,7 @@ class Gui:
         # TODO: Check if the window already exists. Only make a new window if it doesn't exist yet
         log_window = tk.Toplevel(self.master)
         log_window.title('Log')
-        LoggingWindow(log_window)
+        LoggingWindow(log_window, self.logging_queue)
 
     def dummy(self, iterations):
         """Dummy run function to test the interface, e.g. locally on my Mac
@@ -287,7 +288,7 @@ class Gui:
             iterations (int): Number of log messages to be produced
 
         """
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger()
         for i in range(iterations):
             logger.info('Running Dummy')
             time.sleep(1)

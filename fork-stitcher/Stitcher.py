@@ -24,6 +24,7 @@ def get_center_position(master):
 
 
 def main():
+    logging_queue = multiprocessing.Queue(-1)
     root = tk.Tk()
 
     root.title('Fork Stitcher')
@@ -42,7 +43,7 @@ def main():
     from gui import Gui
     loading_message.grid_remove()
     loading_details.grid_remove()
-    p = Gui(root)
+    p = Gui(root, logging_queue)
     root.protocol("WM_DELETE_WINDOW", p.shutdown)
 
     # Run gui until user terminates the program
