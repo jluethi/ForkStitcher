@@ -3,7 +3,7 @@ import sys
 import multiprocessing
 import tkinter as tk
 import logging
-import threading
+import tkinter.font as font
 
 # If everything is run from a frozen .exe package, set the path variables accordingly. See here for details:
 # https://stackoverflow.com/questions/404744/determining-application-path-in-a-python-exe-generated-by-pyinstaller
@@ -16,8 +16,11 @@ if getattr(sys, 'frozen', False):
 
 def main():
     root = tk.Tk()
-    loading_message = tk.Label(root, text='Loading ...')
+    loading_message = tk.Label(root, text='Loading ... Please wait.')
+    loading_message.config(height=2, font=(font.Font(), 24, 'bold'))
     loading_message.grid(row=0, column=0, sticky=tk.E, pady=10, padx=10)
+    loading_details = tk.Label(root, text='Loading takes ~ 30s on normal runs and a few minutes on the first run')
+    loading_details.grid(row=1, column=0, sticky=tk.E, pady=10, padx=10)
     root.update()
 
     root.title('Fork Stitcher')
@@ -31,6 +34,8 @@ def main():
 
     # This import takes time and needs to happen after the paths are set correctly and the loading window is running
     from gui import Gui
+    loading_message.grid_remove()
+    loading_details.grid_remove()
     p = Gui(root)
     root.protocol("WM_DELETE_WINDOW", p.shutdown)
 
