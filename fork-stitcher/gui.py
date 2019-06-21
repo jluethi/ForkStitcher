@@ -277,7 +277,6 @@ class Gui:
         log_window = tk.Toplevel(self.master)
         log_window.title('Log')
         LoggingWindow(log_window)
-        # scrolled_text_box = LoggingWindow(log_window)
 
     def dummy(self, iterations):
         """Dummy run function to test the interface, e.g. locally on my Mac
