@@ -440,7 +440,15 @@ class MapsXmlParser:
             tile_image_folder_path = ''
             metadata_path = self.project_folder_path.joinpath(
                 self.convert_windows_pathstring_to_path_object(metadata_location)) / metadata_filename
-            metadata_root = ET.parse(metadata_path).getroot()
+            try:
+                metadata_root = ET.parse(metadata_path).getroot()
+            except FileNotFoundError:
+                log_file_path = str(self.project_folder_path / (self.project_folder_path.name + '.log'))
+                logger = self.create_logger(log_file_path, self.logging_queue)
+                logger.warn('Could not find the Metadata file for layer {}. Skipping it. If this layer contained ' +
+	                            'annotations, those cannot be stitched afterwards.'.format(metadata_path))
+	            continue
+                
             for metadata_child in metadata_root:
                 if metadata_child.tag.endswith('tileSet'):
                     for metadata_grandchild in metadata_child:
