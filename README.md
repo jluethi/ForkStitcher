@@ -20,16 +20,14 @@ git clone https://github.com/jluethi/ForkStitcher
 ```
 conda create -n fork_stitcher python=3.7
 conda activate fork_stitcher
-conda config --add channels conda-forge 
+conda config --add channels conda-forge
 conda install -n fork_stitcher pyimagej openjdk=8
 ```
 
-5. Install other dependencies into virtualenv:
+5. Install other dependencies into the conda environment:
 ```
-conda install -n fork_stitcher sphinx
-conda install -n fork_stitcher openpyxl
-conda install -n fork_stitcher pyyaml
-pip install StyleFrame
+cd ForkStitcher
+pip install -r requirements.txt
 ```
 
 6. Directly call code from within a python script or start the user interfaces by running the gui.py script.
@@ -48,8 +46,11 @@ conda activate fork_stitcher
 
 2. Go to the ForkStitcher\fork-stitcher folder and type:
 ```
+# Go to folder
 cd ForkStitcher
 cd fork-stitcher
+
+# Run the script
 python Stitcher.py
 ```
 
@@ -80,9 +81,9 @@ Edit the Stitcher.spec file:
   import scyjava
   ```
   2. Path to an openjdk 8. I recommend downloading the zip version for your system from here: https://adoptopenjdk.net/releases.html#x64_win
-  
+
   3. Path to maven. I recommend downloading the binary zip from here: https://maven.apache.org/download.cgi
-  
+
 To create an executable:
 ```
 conda activate fork_stitcher
@@ -105,4 +106,3 @@ The User Interface does not work on Mac because of an issue with pyimage and tki
 pyinstaller -p fork-stitcher --add-data '/miniconda3/envs/fork_stitcher/share/pyjnius/pyjnius.jar:./share/pyjnius/' fork-stitcher/run_stitching_batches.py
 ```
 Where --add-data path points to where the pyjnius JAR file is located on the local machine
-
