@@ -101,7 +101,7 @@ If you manually install the Stitcher without the spec file, either include the l
 
 **For Mac:**
 
-The User Interface does not work on Mac because of an issue with pyimage and tkinter. See here for details and ideas on how to work around it: https://github.com/imagej/pyimagej/issues/39
+The User Interface used to have an issue on Mac because of an issue with pyimage and tkinter. In my current tests, it seems to run fine. If issues come up, see here for details and ideas on how to work around it: https://github.com/imagej/pyimagej/issues/39
 ```
 pyinstaller -p fork-stitcher --add-data '/miniconda3/envs/fork_stitcher/share/pyjnius/pyjnius.jar:./share/pyjnius/' fork-stitcher/run_stitching_batches.py
 ```
